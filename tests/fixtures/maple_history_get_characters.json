@@ -1,0 +1,20 @@
+[
+  {
+    "id": "ed6979fb631addf0f5198e7263828f3e",
+    "character_name": "\ucc3d\ud0ac",
+    "world_name": 10,
+    "character_gender": 2,
+    "character_class": 11,
+    "character_class_level": "6",
+    "character_level": 296,
+    "character_exp": 80128737839758,
+    "character_exp_rate": "8.369",
+    "character_guild_name": "\ub2c8\ub2c8",
+    "character_image": "df6518bf674854cbfe1061c6efcf0c55c4c06eecb9c7193ed38913b120404f07",
+    "character_date_create": 1686754800000,
+    "access_flag": 1,
+    "liberation_quest_clear": 1,
+    "date": 1736607600000,
+    "removed": 0
+  }
+]
