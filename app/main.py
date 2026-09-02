@@ -6,6 +6,7 @@ import logging
 
 from fastapi import FastAPI
 
+from app.api.bridge import router as bridge_router
 from app.api.kakao import router as kakao_router
 from app.bootstrap import ApplicationServices, build_application_services
 from app.core.settings import ApplicationSettings
@@ -23,9 +24,10 @@ def create_lifespan(
     @asynccontextmanager
     async def app_lifespan(app: FastAPI) -> AsyncIterator[None]:
         if settings.kakao_skill_token is None:
-            logger.warning(
-                "kakao_webhook_auth=disabled reason=missing_skill_token"
-            )
+            logger.warning("kakao_webhook_auth=disabled reason=missing_skill_token")
+
+        if settings.bridge_token is None:
+            logger.warning("bridge_auth=disabled reason=missing_bridge_token")
 
         services = services_factory()
         app.state.services = services
@@ -66,6 +68,7 @@ def create_app(
         return {"status": "ok"}
 
     app.include_router(kakao_router)
+    app.include_router(bridge_router)
     return app
 
 

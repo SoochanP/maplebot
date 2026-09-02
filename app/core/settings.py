@@ -11,6 +11,7 @@ class ApplicationSettings(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     kakao_skill_token: str | None = None
+    bridge_token: str | None = None
     kakao_request_timeout_seconds: float = Field(default=4.5, gt=0, le=5.0)
     http_request_timeout_seconds: float = Field(default=3.0, gt=0, le=4.5)
     http_connect_timeout_seconds: float = Field(default=1.0, gt=0, le=3.0)
@@ -19,6 +20,7 @@ class ApplicationSettings(BaseModel):
     def from_env(cls) -> "ApplicationSettings":
         raw_values = {
             "kakao_skill_token": _read_optional_string_env("MAPLEBOT_KAKAO_SKILL_TOKEN"),
+            "bridge_token": _read_optional_string_env("MAPLEBOT_BRIDGE_TOKEN"),
             "kakao_request_timeout_seconds": os.getenv("MAPLEBOT_KAKAO_REQUEST_TIMEOUT_SECONDS"),
             "http_request_timeout_seconds": os.getenv("MAPLEBOT_HTTP_REQUEST_TIMEOUT_SECONDS"),
             "http_connect_timeout_seconds": os.getenv("MAPLEBOT_HTTP_CONNECT_TIMEOUT_SECONDS"),
@@ -29,6 +31,10 @@ class ApplicationSettings(BaseModel):
             if value is not None
         }
         return cls.model_validate(filtered_values)
+
+    @property
+    def command_execution_timeout_seconds(self) -> float:
+        return self.kakao_request_timeout_seconds
 
     @property
     def http_client_settings(self) -> HttpClientSettings:

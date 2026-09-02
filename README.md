@@ -1,6 +1,6 @@
 ﻿# MapleBot
 
-MapleBot is a maintainable command-based MapleStory chatbot backend focused on readable architecture, clean boundaries, and easy future expansion. KakaoTalk integration is currently limited to webhook application wiring and first-connection safety checks.
+MapleBot is a maintainable command-based MapleStory chatbot backend focused on readable architecture, clean boundaries, and easy future expansion. KakaoTalk integration is currently split into an official Kakao webhook and a simple HTTP bridge for Android MessengerBotR-style clients.
 
 ## Requirements
 
@@ -19,15 +19,17 @@ pip install -e .[dev]
 
 Environment variables:
 
-- `MAPLEBOT_KAKAO_SKILL_TOKEN`: optional webhook secret checked against `X-MapleBot-Token`
-- `MAPLEBOT_KAKAO_REQUEST_TIMEOUT_SECONDS`: overall Kakao webhook execution limit, default `4.5`
+- `MAPLEBOT_KAKAO_SKILL_TOKEN`: optional official Kakao webhook secret checked against `X-MapleBot-Token`
+- `MAPLEBOT_BRIDGE_TOKEN`: optional bridge secret checked against `X-MapleBot-Bridge-Token`
+- `MAPLEBOT_KAKAO_REQUEST_TIMEOUT_SECONDS`: shared command execution limit for Kakao and bridge requests, default `4.5`
 - `MAPLEBOT_HTTP_REQUEST_TIMEOUT_SECONDS`: shared outbound request timeout, default `3.0`
 - `MAPLEBOT_HTTP_CONNECT_TIMEOUT_SECONDS`: shared outbound connect timeout, default `1.0`
 
 Behavior:
 
 - If `MAPLEBOT_KAKAO_SKILL_TOKEN` is configured, `POST /kakao/webhook` requires a matching `X-MapleBot-Token` header.
-- If `MAPLEBOT_KAKAO_SKILL_TOKEN` is not configured, the webhook remains open for local development and tests.
+- If `MAPLEBOT_BRIDGE_TOKEN` is configured, `POST /bridge/message` requires a matching `X-MapleBot-Bridge-Token` header.
+- If either token is not configured, that endpoint remains open for local development and tests.
 - `GET /health` is always public.
 
 ## Run Tests
@@ -78,13 +80,19 @@ Health check:
 GET /health
 ```
 
-Kakao webhook:
+Official Kakao webhook:
 
 ```text
 POST /kakao/webhook
 ```
 
-Example request:
+Bridge endpoint:
+
+```text
+POST /bridge/message
+```
+
+Example official Kakao request:
 
 ```http
 POST /kakao/webhook
@@ -100,7 +108,7 @@ Content-Type: application/json
 }
 ```
 
-Example response:
+Example official Kakao response:
 
 ```json
 {
@@ -117,6 +125,30 @@ Example response:
 }
 ```
 
+Example bridge request:
+
+```http
+POST /bridge/message
+X-MapleBot-Bridge-Token: your-bridge-token
+Content-Type: application/json
+```
+
+```json
+{
+  "room": "메이플 단톡방",
+  "sender": "사용자",
+  "message": "!환산 창킬"
+}
+```
+
+Example bridge response:
+
+```json
+{
+  "reply": "[창킬 환산주스탯]\n\nhttps://maplescouter.com/ko/info?name=%EC%B0%BD%ED%82%AC"
+}
+```
+
 ## Current Supported Commands
 
 - `!환산 캐릭터명`
@@ -127,13 +159,14 @@ Example response:
 - `CommandRouter`: validates input, matches the longest registered command name, routes to the correct handler, and can safely expose a matched command name for logging.
 - `ConvertedStatCommand`: receives the character name, asks the link builder for a URL, and formats the user-facing response.
 - `ExperienceHistoryCommand`: receives the character name, selects the latest five snapshots by timestamp, displays them chronologically, and formats only mathematically safe gain indicators.
-- `Kakao webhook`: validates the minimal Kakao request payload, authenticates the optional secret header, extracts `userRequest.utterance`, dispatches through `CommandRouter`, enforces a short request budget, and formats a `simpleText` response.
-- `CLI` and Kakao webhook share the same command pipeline and do not duplicate command logic.
+- `Kakao webhook`: validates the minimal Kakao request payload, authenticates the optional secret header, extracts `userRequest.utterance`, dispatches through `CommandRouter`, and formats a `simpleText` response.
+- `Bridge endpoint`: validates the bridge payload, authenticates the optional bridge token, dispatches `message` through `CommandRouter`, and returns a simple JSON reply.
+- `CLI`, Kakao webhook, and bridge endpoint share the same command pipeline and do not duplicate command logic.
 - `MapleScouterLinkBuilder`: owns MapleScouter URL rules and URL encoding.
 - `MapleHistoryCrawler`: owns MapleHiStory-specific `/ajax/*` requests and response parsing.
 - `HttpClientManager`: owns the reusable `httpx.AsyncClient` lifecycle for crawler-based commands.
 - `ApplicationSettings`: owns environment-based webhook/auth/timeout configuration.
-- `Pydantic` models: used for typed command payloads, typed experience history results, typed Kakao webhook payloads, and settings validation.
+- `Pydantic` models: used for typed command payloads, typed experience history results, webhook payloads, bridge payloads, and settings validation.
 
 ## Add Another Command
 
@@ -155,7 +188,8 @@ Example response:
 - `!환산` does not crawl MapleScouter and does not call MapleScouter APIs.
 - `!경험치 히스토리` uses MapleHiStory public site endpoints under `/ajax/*` and does not require browser automation in the current implementation.
 - `POST /kakao/webhook` only authenticates the optional skill token, parses Kakao input, calls the existing command pipeline, and formats Kakao output.
-- The Kakao webhook logs concise request outcome data such as command name when derivable, duration, success or failure, and expected application error category.
+- `POST /bridge/message` only authenticates the optional bridge token, parses bridge input, calls the existing command pipeline, and formats a JSON reply.
+- The HTTP integrations log concise request outcome data such as command name when derivable, duration, success or failure, and expected application error category.
 - `httpx` remains the shared HTTP client for crawler-based commands.
 - `selectolax` stays in the stack for future HTML parsing needs, but it is not required for the current commands.
-- KakaoTalk channel registration, deployment, database, Redis, AI, MCP, and Playwright are intentionally excluded from this phase.
+- KakaoTalk channel registration, Android bot scripting, deployment expansion, database, Redis, AI, MCP, and Playwright are intentionally excluded from this phase.
