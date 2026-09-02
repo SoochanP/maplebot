@@ -1,4 +1,4 @@
-﻿from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict
 
 
 class ParsedCommand(BaseModel):
@@ -7,3 +7,4 @@ class ParsedCommand(BaseModel):
     raw_text: str
     command: str
     character_name: str | None = None
+    argument_text: str | None = None

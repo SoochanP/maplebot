@@ -1,0 +1,1 @@
+"""Static data tables used by MapleBot commands."""

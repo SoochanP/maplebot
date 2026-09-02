@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
@@ -20,4 +20,5 @@ class ExperienceHistory(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     character_name: str
+    world_name: str | None = None
     entries: list[ExperienceHistoryEntry]

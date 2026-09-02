@@ -1,6 +1,7 @@
-﻿from app.commands.converted_stat import ConvertedStatCommand
+from app.commands.converted_stat import ConvertedStatCommand
 from app.commands.experience_history import ExperienceHistoryCommand
 from app.commands.hexa import HexaCommand
+from app.commands.hexa_cost import HexaCostCommand
 from app.commands.notice import NoticeCommand
 from app.commands.ranking import RankingCommand
 from app.commands.router import CommandRouter
@@ -11,6 +12,7 @@ __all__ = [
     "ConvertedStatCommand",
     "ExperienceHistoryCommand",
     "HexaCommand",
+    "HexaCostCommand",
     "NoticeCommand",
     "RankingCommand",
     "UnionCommand",

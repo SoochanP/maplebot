@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import asyncio
 from datetime import date, datetime, timezone
@@ -11,6 +11,7 @@ from app.bootstrap import ApplicationServices
 from app.commands.converted_stat import ConvertedStatCommand
 from app.commands.experience_history import ExperienceHistoryCommand
 from app.commands.hexa import HexaCommand
+from app.commands.hexa_cost import HexaCostCommand
 from app.commands.notice import NoticeCommand
 from app.commands.ranking import RankingCommand
 from app.commands.router import CommandRouter
@@ -53,6 +54,7 @@ class FakeHistoryCrawler:
 
         return ExperienceHistory(
             character_name=character_name,
+            world_name="\uc2a4\uce74\ub2c8\uc544",
             entries=[
                 ExperienceHistoryEntry(
                     date=date(2025, 1, 11),
@@ -77,18 +79,18 @@ class FakeHistoryCrawler:
             character_name=character_name,
             cores=[
                 HexaCore(
-                    name="데드 스페이스",
+                    name="\ub370\ub4dc \uc2a4\ud398\uc774\uc2a4",
                     level=18,
-                    core_type="스킬 코어",
-                    linked_skills=["데드 스페이스"],
+                    core_type="\uc2a4\ud0ac \ucf54\uc5b4",
+                    linked_skills=["\ub370\ub4dc \uc2a4\ud398\uc774\uc2a4"],
                 )
             ],
             stat_sets=[
                 HexaStatSet(
-                    label="HEXA 스탯 I",
+                    label="HEXA \uc2a4\ud0ef I",
                     cores=[
                         HexaStatCore(
-                            main_stat_name="공격력 증가",
+                            main_stat_name="\uacf5\uaca9\ub825 \uc99d\uac00",
                             main_stat_level=8,
                         )
                     ],
@@ -101,17 +103,17 @@ class FakeHistoryCrawler:
         return UnionOverview(
             character_name=character_name,
             union_level=9867,
-            union_grade="그랜드 마스터 유니온 4",
+            union_grade="\uadf8\ub79c\ub4dc \ub9c8\uc2a4\ud130 \uc720\ub2c8\uc628 4",
             union_artifact_level=59,
             union_artifact_point=19700,
             union_artifact_remain_ap=6,
             artifact_effects=[
-                UnionArtifactEffect(name="올스탯 150 증가", level=10),
+                UnionArtifactEffect(name="\uc62c\uc2a4\ud0ef 150 \uc99d\uac00", level=10),
             ],
             champions=[
-                UnionChampion(name="대표캐릭터", grade="SSS"),
+                UnionChampion(name="\ub300\ud45c\uce90\ub9ad\ud130", grade="SSS"),
             ],
-            champion_badge_totals=["크리티컬 데미지 12.00% 증가"],
+            champion_badge_totals=["\ud06c\ub9ac\ud2f0\uceec \ub370\ubbf8\uc9c0 12.00% \uc99d\uac00"],
         )
 
     async def fetch_overall_ranking(self, character_name: str) -> CharacterRanking:
@@ -120,8 +122,8 @@ class FakeHistoryCrawler:
             character_name=character_name,
             ranking=12345,
             ranking_date=date(2025, 1, 12),
-            world_name="스카니아",
-            class_name="다크나이트",
+            world_name="\uc2a4\uce74\ub2c8\uc544",
+            class_name="\ub2e4\ud06c\ub098\uc774\ud2b8",
             character_level=289,
         )
 
@@ -130,7 +132,7 @@ class FakeHistoryCrawler:
         return NoticeFeed(
             items=[
                 NoticeItem(
-                    title="테스트 공지",
+                    title="\ud14c\uc2a4\ud2b8 \uacf5\uc9c0",
                     url="https://example.com/notices/1",
                     published_at=datetime(2025, 1, 12, tzinfo=timezone.utc),
                 )
@@ -152,6 +154,7 @@ def build_test_app(
             handlers=[
                 ConvertedStatCommand(MapleScouterLinkBuilder()),
                 HexaCommand(crawler),
+                HexaCostCommand(),
                 UnionCommand(crawler),
                 RankingCommand(crawler),
                 NoticeCommand(crawler),
@@ -199,5 +202,5 @@ def request_json(
 
 def build_provider_timeout_error() -> ExternalSiteUnavailableError:
     return ExternalSiteUnavailableError(
-        "현재 조회 사이트에 접속할 수 없습니다.\n잠시 후 다시 시도해주세요."
+        "\ud604\uc7ac \uc870\ud68c \uc0ac\uc774\ud2b8\uc5d0 \uc811\uc18d\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.\n\uc7a0\uc2dc \ud6c4 \ub2e4\uc2dc \uc2dc\ub3c4\ud574\uc8fc\uc138\uc694."
     )

@@ -421,6 +421,7 @@ def test_fetch_experience_history_collects_valid_daily_snapshots_in_chronologica
             json={
                 "date": f"{requested_date}T00:00+09:00",
                 "character_name": "창킬",
+                "world_name": "스카니아",
                 "character_level": level,
                 "character_exp": experience,
                 "character_exp_rate": percent,
@@ -435,6 +436,7 @@ def test_fetch_experience_history_collects_valid_daily_snapshots_in_chronologica
 
     history = run_client_call(client_manager, client.fetch_experience_history("창킬"))
 
+    assert history.world_name == "스카니아"
     assert requested_dates == [
         "2026-09-02",
         "2026-09-01",

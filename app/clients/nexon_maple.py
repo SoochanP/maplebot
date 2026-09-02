@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, TypeVar
@@ -229,9 +229,9 @@ class NexonMapleClient:
         candidate_dates = self._history_candidate_dates()
         semaphore = asyncio.Semaphore(self._config.history_max_concurrency)
 
-        async def fetch_snapshot(target_date: date) -> ExperienceHistoryEntry | None:
+        async def fetch_snapshot(target_date: date) -> NexonCharacterBasicPayload | None:
             async with semaphore:
-                payload = await self._get_model(
+                return await self._get_model(
                     self._config.character_basic_path,
                     params={
                         "ocid": ocid,
@@ -241,23 +241,22 @@ class NexonMapleClient:
                     allow_missing=True,
                 )
 
-            if payload is None:
-                return None
+        payloads = await asyncio.gather(*(fetch_snapshot(target_date) for target_date in candidate_dates))
+        available_payloads = [payload for payload in payloads if payload is not None]
+        if not available_payloads:
+            raise EmptyHistoryError("경험치 히스토리가 없습니다.")
 
-            snapshot_at = payload.date.astimezone(_KST)
-            return ExperienceHistoryEntry(
+        entries = [
+            ExperienceHistoryEntry(
                 date=snapshot_at.date(),
                 snapshot_at=snapshot_at,
                 level=payload.character_level,
                 experience=payload.character_exp,
                 experience_percent=payload.character_exp_rate,
             )
-
-        results = await asyncio.gather(*(fetch_snapshot(target_date) for target_date in candidate_dates))
-        entries = [entry for entry in results if entry is not None]
-        if not entries:
-            raise EmptyHistoryError("경험치 히스토리가 없습니다.")
-
+            for payload in available_payloads
+            for snapshot_at in [payload.date.astimezone(_KST)]
+        ]
         entries.sort(
             key=lambda entry: (
                 self._normalized_snapshot_at(entry.snapshot_at),
@@ -265,7 +264,12 @@ class NexonMapleClient:
                 entry.experience,
             )
         )
-        return ExperienceHistory(character_name=character_name, entries=entries)
+        world_name = next((payload.world_name for payload in available_payloads if payload.world_name), None)
+        return ExperienceHistory(
+            character_name=character_name,
+            world_name=world_name,
+            entries=entries,
+        )
 
     async def _get_model(
         self,

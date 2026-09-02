@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass
 
@@ -6,6 +6,7 @@ from app.clients.nexon_maple import NexonMapleClient
 from app.commands.converted_stat import ConvertedStatCommand
 from app.commands.experience_history import ExperienceHistoryCommand
 from app.commands.hexa import HexaCommand
+from app.commands.hexa_cost import HexaCostCommand
 from app.commands.notice import NoticeCommand
 from app.commands.ranking import RankingCommand
 from app.commands.router import CommandRouter
@@ -25,6 +26,7 @@ class ApplicationServices:
 
     async def close(self) -> None:
         await self.http_client_manager.close()
+
 
 
 def build_application_services(
@@ -47,6 +49,7 @@ def build_application_services(
         handlers=[
             ConvertedStatCommand(link_builder),
             HexaCommand(provider_client),
+            HexaCostCommand(),
             UnionCommand(provider_client),
             RankingCommand(provider_client),
             NoticeCommand(provider_client),

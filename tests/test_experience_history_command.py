@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import asyncio
 from datetime import date, datetime, timezone
@@ -17,6 +17,7 @@ class FakeCrawler:
     async def fetch_experience_history(self, character_name: str) -> ExperienceHistory:
         self.received_names.append(character_name)
         return self.history
+
 
 
 def build_entry(
@@ -40,6 +41,7 @@ def build_entry(
     )
 
 
+
 def dispatch(history: ExperienceHistory) -> str:
     crawler = FakeCrawler(history)
     command = ExperienceHistoryCommand(crawler)
@@ -47,21 +49,23 @@ def dispatch(history: ExperienceHistory) -> str:
     result = asyncio.run(
         command.handle(
             ParsedCommand(
-                raw_text="!경험치 히스토리 창킬",
-                command="경험치 히스토리",
-                character_name="창킬",
+                raw_text="!\uacbd\ud5d8\uce58 \ud788\uc2a4\ud1a0\ub9ac \ucc3d\ud0ac",
+                command="\uacbd\ud5d8\uce58 \ud788\uc2a4\ud1a0\ub9ac",
+                character_name="\ucc3d\ud0ac",
+                argument_text="\ucc3d\ud0ac",
             )
         )
     )
 
-    assert crawler.received_names == ["창킬"]
+    assert crawler.received_names == ["\ucc3d\ud0ac"]
     return result
 
 
 def test_experience_history_command_selects_latest_five_from_unsorted_entries() -> None:
     result = dispatch(
         ExperienceHistory(
-            character_name="창킬",
+            character_name="\ucc3d\ud0ac",
+            world_name="\uc2a4\uce74\ub2c8\uc544",
             entries=[
                 build_entry(2025, 1, 10, level=289, experience=51761074759717, experience_percent="35.527"),
                 build_entry(2025, 1, 6, level=289, experience=37154536048390, experience_percent="25.501"),
@@ -75,20 +79,24 @@ def test_experience_history_command_selects_latest_five_from_unsorted_entries() 
     )
 
     assert result == (
-        "[창킬 경험치 히스토리]\n\n"
-        "01/08  Lv.289  31.845%\n"
-        "01/09  Lv.289  33.576%  (+1.731%)\n"
-        "01/10  Lv.289  35.527%  (+1.951%)\n"
-        "01/11  Lv.289  40.050%  (+4.523%)\n"
-        "01/12  Lv.289  41.334%  (+1.284%)\n\n"
-        "최근 5개 기록 변화: +13,824,848,783,387 EXP (+9.489%)"
+        "[\ucc3d\ud0ac] - \uc2a4\uce74\ub2c8\uc544\n\n"
+        "01\uc6d4 08\uc77c : Lv.289 31.845%\n"
+        "01\uc6d4 09\uc77c : Lv.289 33.576% (+2.5\uc870)\n"
+        "01\uc6d4 10\uc77c : Lv.289 35.527% (+2.8\uc870)\n"
+        "01\uc6d4 11\uc77c : Lv.289 40.050% (+6.6\uc870)\n"
+        "01\uc6d4 12\uc77c : Lv.289 41.334% (+1.9\uc870)\n\n"
+        "\uc77c\uc77c \ud3c9\uade0 \ud68d\ub4dd\ub7c9: 3.5\uc870\n"
+        "\ub0a8\uc740 \uacbd\ud5d8\uce58\ub7c9: 85.5\uc870\n"
+        "\uc608\uc0c1 \ub808\ubca8\uc5c5 \ub0a0\uc9dc:\n"
+        "25\ub144 02\uc6d4 06\uc77c (25\uc77c \ud6c4)"
     )
 
 
 def test_experience_history_command_formats_exactly_five_entries() -> None:
     result = dispatch(
         ExperienceHistory(
-            character_name="창킬",
+            character_name="\ucc3d\ud0ac",
+            world_name="\uc624\ub85c\ub77c",
             entries=[
                 build_entry(2025, 2, 1, level=280, experience=100, experience_percent="1.000"),
                 build_entry(2025, 2, 2, level=280, experience=200, experience_percent="2.000"),
@@ -100,20 +108,24 @@ def test_experience_history_command_formats_exactly_five_entries() -> None:
     )
 
     assert result == (
-        "[창킬 경험치 히스토리]\n\n"
-        "02/01  Lv.280  1.000%\n"
-        "02/02  Lv.280  2.000%  (+1.000%)\n"
-        "02/03  Lv.280  3.000%  (+1.000%)\n"
-        "02/04  Lv.280  4.000%  (+1.000%)\n"
-        "02/05  Lv.280  5.000%  (+1.000%)\n\n"
-        "최근 5개 기록 변화: +400 EXP (+4.000%)"
+        "[\ucc3d\ud0ac] - \uc624\ub85c\ub77c\n\n"
+        "02\uc6d4 01\uc77c : Lv.280 1.000%\n"
+        "02\uc6d4 02\uc77c : Lv.280 2.000% (+100 EXP)\n"
+        "02\uc6d4 03\uc77c : Lv.280 3.000% (+100 EXP)\n"
+        "02\uc6d4 04\uc77c : Lv.280 4.000% (+100 EXP)\n"
+        "02\uc6d4 05\uc77c : Lv.280 5.000% (+100 EXP)\n\n"
+        "\uc77c\uc77c \ud3c9\uade0 \ud68d\ub4dd\ub7c9: 100 EXP\n"
+        "\ub0a8\uc740 \uacbd\ud5d8\uce58\ub7c9: 9,500 EXP\n"
+        "\uc608\uc0c1 \ub808\ubca8\uc5c5 \ub0a0\uc9dc:\n"
+        "25\ub144 05\uc6d4 11\uc77c (95\uc77c \ud6c4)"
     )
 
 
 def test_experience_history_command_formats_fewer_than_five_entries() -> None:
     result = dispatch(
         ExperienceHistory(
-            character_name="창킬",
+            character_name="\ucc3d\ud0ac",
+            world_name="\ubca0\ub77c",
             entries=[
                 build_entry(2025, 3, 1, level=281, experience=1000, experience_percent="10.000"),
                 build_entry(2025, 3, 2, level=281, experience=1250, experience_percent="12.500"),
@@ -123,31 +135,62 @@ def test_experience_history_command_formats_fewer_than_five_entries() -> None:
     )
 
     assert result == (
-        "[창킬 경험치 히스토리]\n\n"
-        "03/01  Lv.281  10.000%\n"
-        "03/02  Lv.281  12.500%  (+2.500%)\n"
-        "03/03  Lv.281  15.000%  (+2.500%)\n\n"
-        "최근 3개 기록 변화: +500 EXP (+5.000%)"
+        "[\ucc3d\ud0ac] - \ubca0\ub77c\n\n"
+        "03\uc6d4 01\uc77c : Lv.281 10.000%\n"
+        "03\uc6d4 02\uc77c : Lv.281 12.500% (+250 EXP)\n"
+        "03\uc6d4 03\uc77c : Lv.281 15.000% (+250 EXP)\n\n"
+        "\uc77c\uc77c \ud3c9\uade0 \ud68d\ub4dd\ub7c9: 250 EXP\n"
+        "\ub0a8\uc740 \uacbd\ud5d8\uce58\ub7c9: 8,500 EXP\n"
+        "\uc608\uc0c1 \ub808\ubca8\uc5c5 \ub0a0\uc9dc:\n"
+        "25\ub144 04\uc6d4 06\uc77c (34\uc77c \ud6c4)"
     )
 
 
-def test_experience_history_command_marks_level_up_and_uses_snapshot_time_for_same_day_records() -> None:
+def test_experience_history_command_calculates_level_up_gain_and_uses_snapshot_time_for_same_day_records() -> None:
     result = dispatch(
         ExperienceHistory(
-            character_name="창킬",
+            character_name="\ucc3d\ud0ac",
+            world_name="\ub8e8\ub098",
             entries=[
                 build_entry(2025, 8, 31, level=290, experience=1550, experience_percent="15.500"),
                 build_entry(2025, 8, 30, level=290, experience=1200, experience_percent="12.000", hour=23),
-                build_entry(2025, 8, 29, level=289, experience=9850, experience_percent="98.500"),
+                build_entry(2025, 8, 29, level=289, experience=9800, experience_percent="98.500"),
                 build_entry(2025, 8, 30, level=290, experience=1023, experience_percent="10.231", hour=1),
             ],
         )
     )
 
     assert result == (
-        "[창킬 경험치 히스토리]\n\n"
-        "08/29  Lv.289  98.500%\n"
-        "08/30  Lv.290  10.231%  (레벨업)\n"
-        "08/30  Lv.290  12.000%  (+1.769%)\n"
-        "08/31  Lv.290  15.500%  (+3.500%)"
+        "[\ucc3d\ud0ac] - \ub8e8\ub098\n\n"
+        "08\uc6d4 29\uc77c : Lv.289 98.500%\n"
+        "08\uc6d4 30\uc77c : Lv.290 10.231% (+1,172 EXP)\n"
+        "08\uc6d4 30\uc77c : Lv.290 12.000% (+177 EXP)\n"
+        "08\uc6d4 31\uc77c : Lv.290 15.500% (+350 EXP)\n\n"
+        "\uc77c\uc77c \ud3c9\uade0 \ud68d\ub4dd\ub7c9: 566 EXP\n"
+        "\ub0a8\uc740 \uacbd\ud5d8\uce58\ub7c9: 8,450 EXP\n"
+        "\uc608\uc0c1 \ub808\ubca8\uc5c5 \ub0a0\uc9dc:\n"
+        "25\ub144 09\uc6d4 15\uc77c (15\uc77c \ud6c4)"
+    )
+
+
+def test_experience_history_command_formats_zero_gain_and_unavailable_prediction() -> None:
+    result = dispatch(
+        ExperienceHistory(
+            character_name="\ucc3d\ud0ac",
+            world_name="\uc5d8\ub9ac\uc2dc\uc6c0",
+            entries=[
+                build_entry(2025, 9, 1, level=282, experience=250, experience_percent="25.000"),
+                build_entry(2025, 9, 2, level=282, experience=250, experience_percent="25.000"),
+            ],
+        )
+    )
+
+    assert result == (
+        "[\ucc3d\ud0ac] - \uc5d8\ub9ac\uc2dc\uc6c0\n\n"
+        "09\uc6d4 01\uc77c : Lv.282 25.000%\n"
+        "09\uc6d4 02\uc77c : Lv.282 25.000% (+0)\n\n"
+        "\uc77c\uc77c \ud3c9\uade0 \ud68d\ub4dd\ub7c9: 0\n"
+        "\ub0a8\uc740 \uacbd\ud5d8\uce58\ub7c9: 750 EXP\n"
+        "\uc608\uc0c1 \ub808\ubca8\uc5c5 \ub0a0\uc9dc:\n"
+        "\uacc4\uc0b0 \ubd88\uac00"
     )
