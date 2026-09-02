@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
-from typing import Any, TypeVar
 import asyncio
+import logging
+import time
+from typing import Any, TypeVar
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
@@ -45,6 +47,21 @@ _RESPONSE_ERROR_MESSAGE = "NEXON API 응답을 해석하지 못했습니다."
 _UNAVAILABLE_MESSAGE = "현재 조회 사이트에 접속할 수 없습니다.\n잠시 후 다시 시도해주세요."
 ModelT = TypeVar("ModelT", bound=BaseModel)
 NowProvider = Callable[[], datetime]
+
+
+logger = logging.getLogger("maplebot.nexon_api")
+
+_OPERATION_NAMES = {
+    "/maplestory/v1/id": "character_lookup",
+    "/maplestory/v1/character/basic": "character_basic",
+    "/maplestory/v1/character/hexamatrix": "character_hexa",
+    "/maplestory/v1/character/hexamatrix-stat": "character_hexa_stat",
+    "/maplestory/v1/user/union": "union",
+    "/maplestory/v1/user/union-artifact": "union_artifact",
+    "/maplestory/v1/user/union-champion": "union_champion",
+    "/maplestory/v1/ranking/overall": "ranking_overall",
+    "/maplestory/v1/notice": "notice",
+}
 
 
 @dataclass(slots=True, frozen=True)
@@ -302,6 +319,9 @@ class NexonMapleClient:
         allow_missing: bool,
         bad_request_error: CrawlerError | None,
     ) -> Any | None:
+        operation = self._operation_name_for_path(path)
+        started_at = time.perf_counter()
+
         try:
             response = await self._http_client_manager.client.get(
                 f"{self._config.base_url}{path}",
@@ -309,42 +329,117 @@ class NexonMapleClient:
                 headers=self._build_headers(),
             )
         except httpx.TimeoutException as exc:
+            self._log_request(operation=operation, started_at=started_at, outcome="timeout")
             raise ExternalSiteUnavailableError(_UNAVAILABLE_MESSAGE) from exc
         except httpx.RequestError as exc:
+            self._log_request(operation=operation, started_at=started_at, outcome="request_error")
             raise ExternalSiteUnavailableError(_UNAVAILABLE_MESSAGE) from exc
 
         if response.status_code in {401, 403}:
-            raise ConfigurationError("현재 NEXON API 설정이 올바르지 않습니다.")
+            self._log_request(
+                operation=operation,
+                started_at=started_at,
+                outcome="auth_error",
+                status_code=response.status_code,
+            )
+            raise ConfigurationError("\ud604\uc7ac NEXON API \uc124\uc815\uc774 \uc62c\ubc14\ub974\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.")
 
         if response.status_code == 400:
+            self._log_request(
+                operation=operation,
+                started_at=started_at,
+                outcome="bad_request",
+                status_code=response.status_code,
+            )
             if bad_request_error is not None:
                 raise bad_request_error
             if allow_missing:
                 return None
-            raise CrawlerError("NEXON API 요청에 실패했습니다.")
+            raise CrawlerError("NEXON API \uc694\uccad\uc774 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.")
 
         if response.status_code == 404 and allow_missing:
+            self._log_request(
+                operation=operation,
+                started_at=started_at,
+                outcome="missing",
+                status_code=response.status_code,
+            )
             return None
 
         if response.status_code == 429 or response.status_code >= 500:
+            self._log_request(
+                operation=operation,
+                started_at=started_at,
+                outcome="unavailable",
+                status_code=response.status_code,
+            )
             raise ExternalSiteUnavailableError(_UNAVAILABLE_MESSAGE)
 
         if response.is_error:
-            raise CrawlerError("NEXON API 요청에 실패했습니다.")
+            self._log_request(
+                operation=operation,
+                started_at=started_at,
+                outcome="http_error",
+                status_code=response.status_code,
+            )
+            raise CrawlerError("NEXON API \uc694\uccad\uc774 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.")
 
         content_type = response.headers.get("content-type", "").lower()
         if "application/json" not in content_type:
+            self._log_request(
+                operation=operation,
+                started_at=started_at,
+                outcome="invalid_content_type",
+                status_code=response.status_code,
+            )
             raise CrawlerError(_RESPONSE_ERROR_MESSAGE)
 
         try:
-            return response.json()
+            payload = response.json()
         except ValueError as exc:
+            self._log_request(
+                operation=operation,
+                started_at=started_at,
+                outcome="invalid_json",
+                status_code=response.status_code,
+            )
             raise CrawlerError(_RESPONSE_ERROR_MESSAGE) from exc
+
+        self._log_request(
+            operation=operation,
+            started_at=started_at,
+            outcome="success",
+            status_code=response.status_code,
+        )
+        return payload
 
     def _build_headers(self) -> dict[str, str]:
         if self._api_key is None:
-            raise ConfigurationError("NEXON API 키 설정이 필요합니다.")
+            raise ConfigurationError("NEXON API \ud0a4 \uc124\uc815\uc774 \ud544\uc694\ud569\ub2c8\ub2e4.")
         return {"x-nxopen-api-key": self._api_key}
+
+    @staticmethod
+    def _operation_name_for_path(path: str) -> str:
+        return _OPERATION_NAMES.get(path, "unknown")
+
+    @staticmethod
+    def _log_request(
+        *,
+        operation: str,
+        started_at: float,
+        outcome: str,
+        status_code: int | None = None,
+    ) -> None:
+        duration_ms = round((time.perf_counter() - started_at) * 1000)
+        parts = [
+            f"operation={operation}",
+            f"outcome={outcome}",
+            f"duration_ms={duration_ms}",
+        ]
+        if status_code is not None:
+            parts.append(f"status_code={status_code}")
+
+        logger.info("nexon_api %s", " ".join(parts))
 
     def _history_candidate_dates(self) -> list[date]:
         today = self._kst_now().date()

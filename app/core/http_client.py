@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass
 
@@ -7,8 +7,8 @@ import httpx
 
 @dataclass(slots=True, frozen=True)
 class HttpClientSettings:
-    request_timeout_seconds: float = 3.0
-    connect_timeout_seconds: float = 1.0
+    request_timeout_seconds: float = 8.0
+    connect_timeout_seconds: float = 2.0
     follow_redirects: bool = True
     user_agent: str = "MapleBot/0.1"
 

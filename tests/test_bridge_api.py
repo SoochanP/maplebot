@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.api.bridge import BRIDGE_TOKEN_HEADER
-from tests.api_test_support import build_test_app, request_json
+from tests.api_test_support import FakeHistoryCrawler, build_test_app, request_json
 
 
 EXPECTED_HISTORY_REPLY = (
@@ -216,3 +216,50 @@ def test_bridge_message_rejects_invalid_bridge_token() -> None:
 
     assert response.status_code == 401
     assert response.json() == {"detail": "Unauthorized"}
+
+
+def test_bridge_message_uses_command_timeout_instead_of_kakao_timeout() -> None:
+    app, history_crawler = build_test_app(
+        bridge_token="bridge-secret",
+        kakao_request_timeout_seconds=0.01,
+        command_execution_timeout_seconds=1.0,
+        http_request_timeout_seconds=0.001,
+        http_connect_timeout_seconds=0.001,
+        history_crawler=FakeHistoryCrawler(delay_seconds=0.05),
+    )
+
+    response = request_json(
+        app,
+        "POST",
+        "/bridge/message",
+        headers={BRIDGE_TOKEN_HEADER: "bridge-secret"},
+        json={"message": "!\uacbd\ud5d8\uce58 \ud788\uc2a4\ud1a0\ub9ac \ucc3d\ud0ac"},
+    )
+
+    assert response.status_code == 200
+    assert history_crawler.received_names == ["\ucc3d\ud0ac"]
+    assert response.json() == {"reply": EXPECTED_HISTORY_REPLY}
+
+
+def test_bridge_message_maps_command_timeout_to_user_friendly_error() -> None:
+    app, history_crawler = build_test_app(
+        bridge_token="bridge-secret",
+        command_execution_timeout_seconds=0.01,
+        http_request_timeout_seconds=0.001,
+        http_connect_timeout_seconds=0.001,
+        history_crawler=FakeHistoryCrawler(delay_seconds=0.05),
+    )
+
+    response = request_json(
+        app,
+        "POST",
+        "/bridge/message",
+        headers={BRIDGE_TOKEN_HEADER: "bridge-secret"},
+        json={"message": "!\uacbd\ud5d8\uce58 \ud788\uc2a4\ud1a0\ub9ac \ucc3d\ud0ac"},
+    )
+
+    assert response.status_code == 200
+    assert history_crawler.received_names == ["\ucc3d\ud0ac"]
+    assert response.json() == {
+        "reply": "\ud604\uc7ac \uc870\ud68c \uc0ac\uc774\ud2b8\uc5d0 \uc811\uc18d\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.\n\uc7a0\uc2dc \ud6c4 \ub2e4\uc2dc \uc2dc\ub3c4\ud574\uc8fc\uc138\uc694."
+    }

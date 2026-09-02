@@ -1,8 +1,8 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import os
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.core.http_client import HttpClientSettings
 
@@ -14,8 +14,9 @@ class ApplicationSettings(BaseModel):
     bridge_token: str | None = None
     nexon_api_key: str | None = None
     kakao_request_timeout_seconds: float = Field(default=4.5, gt=0, le=5.0)
-    http_request_timeout_seconds: float = Field(default=3.0, gt=0, le=4.5)
-    http_connect_timeout_seconds: float = Field(default=1.0, gt=0, le=3.0)
+    command_execution_timeout_seconds: float = Field(default=15.0, gt=0, le=30.0)
+    http_request_timeout_seconds: float = Field(default=8.0, gt=0, le=15.0)
+    http_connect_timeout_seconds: float = Field(default=2.0, gt=0, le=5.0)
 
     @classmethod
     def from_env(cls) -> "ApplicationSettings":
@@ -24,6 +25,9 @@ class ApplicationSettings(BaseModel):
             "bridge_token": _read_optional_string_env("MAPLEBOT_BRIDGE_TOKEN"),
             "nexon_api_key": _read_optional_string_env("MAPLEBOT_NEXON_API_KEY"),
             "kakao_request_timeout_seconds": os.getenv("MAPLEBOT_KAKAO_REQUEST_TIMEOUT_SECONDS"),
+            "command_execution_timeout_seconds": os.getenv(
+                "MAPLEBOT_COMMAND_EXECUTION_TIMEOUT_SECONDS"
+            ),
             "http_request_timeout_seconds": os.getenv("MAPLEBOT_HTTP_REQUEST_TIMEOUT_SECONDS"),
             "http_connect_timeout_seconds": os.getenv("MAPLEBOT_HTTP_CONNECT_TIMEOUT_SECONDS"),
         }
@@ -34,9 +38,17 @@ class ApplicationSettings(BaseModel):
         }
         return cls.model_validate(filtered_values)
 
-    @property
-    def command_execution_timeout_seconds(self) -> float:
-        return self.kakao_request_timeout_seconds
+    @model_validator(mode="after")
+    def validate_timeouts(self) -> "ApplicationSettings":
+        if self.http_connect_timeout_seconds > self.http_request_timeout_seconds:
+            raise ValueError("HTTP connect timeout must not exceed HTTP request timeout.")
+
+        if self.command_execution_timeout_seconds <= self.http_request_timeout_seconds:
+            raise ValueError(
+                "Command execution timeout must be greater than HTTP request timeout."
+            )
+
+        return self
 
     @property
     def http_client_settings(self) -> HttpClientSettings:
@@ -53,4 +65,3 @@ def _read_optional_string_env(name: str) -> str | None:
 
     stripped_value = value.strip()
     return stripped_value or None
-

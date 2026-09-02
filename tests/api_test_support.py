@@ -145,11 +145,19 @@ def build_test_app(
     kakao_skill_token: str | None = None,
     bridge_token: str | None = None,
     kakao_request_timeout_seconds: float = 4.5,
+    command_execution_timeout_seconds: float = 15.0,
+    http_request_timeout_seconds: float = 8.0,
+    http_connect_timeout_seconds: float = 2.0,
     history_crawler: FakeHistoryCrawler | None = None,
 ) -> tuple[Any, FakeHistoryCrawler]:
     crawler = history_crawler or FakeHistoryCrawler()
     services = ApplicationServices(
-        http_client_manager=HttpClientManager(settings=HttpClientSettings()),
+        http_client_manager=HttpClientManager(
+            settings=HttpClientSettings(
+                request_timeout_seconds=http_request_timeout_seconds,
+                connect_timeout_seconds=http_connect_timeout_seconds,
+            )
+        ),
         command_router=CommandRouter(
             handlers=[
                 ConvertedStatCommand(MapleScouterLinkBuilder()),
@@ -166,6 +174,9 @@ def build_test_app(
         kakao_skill_token=kakao_skill_token,
         bridge_token=bridge_token,
         kakao_request_timeout_seconds=kakao_request_timeout_seconds,
+        command_execution_timeout_seconds=command_execution_timeout_seconds,
+        http_request_timeout_seconds=http_request_timeout_seconds,
+        http_connect_timeout_seconds=http_connect_timeout_seconds,
     )
     app = create_app(services=services, settings=settings)
     return app, crawler

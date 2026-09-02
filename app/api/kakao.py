@@ -140,7 +140,7 @@ async def kakao_webhook(
     execution_result = await execute_command_text(
         command_router,
         webhook_request.user_request.utterance,
-        timeout_seconds=settings.command_execution_timeout_seconds,
+        timeout_seconds=settings.kakao_request_timeout_seconds,
     )
 
     if execution_result.success:
