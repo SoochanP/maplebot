@@ -14,7 +14,7 @@ class ExperienceHistoryReader(Protocol):
 
 
 class ExperienceHistoryCommand(CommandHandler):
-    command_name = "경험치 히스토리"
+    command_name = "경험치"
 
     def __init__(
         self,
