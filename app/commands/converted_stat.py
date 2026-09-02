@@ -12,8 +12,9 @@ class ConvertedStatCommand(CommandHandler):
         self._link_builder = link_builder
 
     async def handle(self, command: ParsedCommand) -> str:
-        url = self._link_builder.build(command.character_name)
-        return self._format_response(command.character_name, url)
+        character_name = self.require_character_name(command)
+        url = self._link_builder.build(character_name)
+        return self._format_response(character_name, url)
 
     @staticmethod
     def _format_response(character_name: str, url: str) -> str:

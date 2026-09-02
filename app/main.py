@@ -29,6 +29,11 @@ def create_lifespan(
         if settings.bridge_token is None:
             logger.warning("bridge_auth=disabled reason=missing_bridge_token")
 
+        if settings.nexon_api_key is None:
+            logger.warning(
+                "nexon_api=disabled reason=missing_api_key affected_commands=헥사,유니온,랭킹,공지,경험치_히스토리"
+            )
+
         services = services_factory()
         app.state.services = services
         await services.start()

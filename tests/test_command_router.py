@@ -24,9 +24,22 @@ class EchoExperienceHistoryHandler(CommandHandler):
         return f"{command.command}:{command.character_name}"
 
 
+class EchoNoticeHandler(CommandHandler):
+    command_name = "공지"
+    requires_character_name = False
+    usage_example = "!공지"
+
+    async def handle(self, command: ParsedCommand) -> str:
+        return command.command
+
+
 def build_router() -> CommandRouter:
     return CommandRouter(
-        handlers=[EchoConvertedStatHandler(), EchoExperienceHistoryHandler()]
+        handlers=[
+            EchoConvertedStatHandler(),
+            EchoExperienceHistoryHandler(),
+            EchoNoticeHandler(),
+        ]
     )
 
 
@@ -48,6 +61,15 @@ def test_parse_valid_experience_history_command() -> None:
     assert parsed.character_name == "창킬"
 
 
+def test_parse_valid_notice_command_without_character_name() -> None:
+    router = build_router()
+
+    parsed = router.parse("!공지")
+
+    assert parsed.command == "공지"
+    assert parsed.character_name is None
+
+
 def test_parse_missing_character_name() -> None:
     router = build_router()
 
@@ -60,6 +82,13 @@ def test_parse_missing_character_name_for_multiword_command() -> None:
 
     with pytest.raises(InvalidCommandError, match="캐릭터명을 입력해주세요."):
         router.parse("!경험치 히스토리")
+
+
+def test_parse_notice_rejects_unexpected_argument() -> None:
+    router = build_router()
+
+    with pytest.raises(InvalidCommandError, match=r"예시: !공지"):
+        router.parse("!공지 창킬")
 
 
 def test_parse_unsupported_command() -> None:
@@ -121,3 +150,11 @@ def test_dispatch_uses_longest_matching_command_name() -> None:
     result = asyncio.run(router.dispatch("!경험치 히스토리 창킬"))
 
     assert result == "경험치 히스토리:창킬"
+
+
+def test_dispatch_notice_without_character_name() -> None:
+    router = build_router()
+
+    result = asyncio.run(router.dispatch("!공지"))
+
+    assert result == "공지"

@@ -16,6 +16,10 @@ class UnsupportedCommandError(InvalidCommandError):
     pass
 
 
+class ConfigurationError(MapleBotError):
+    pass
+
+
 class CrawlerError(MapleBotError):
     pass
 
@@ -30,3 +34,20 @@ class EmptyHistoryError(CrawlerError):
 
 class ExternalSiteUnavailableError(CrawlerError):
     pass
+
+
+class EmptyHexaError(CrawlerError):
+    pass
+
+
+class EmptyUnionError(CrawlerError):
+    pass
+
+
+class RankingUnavailableError(CrawlerError):
+    pass
+
+
+class EmptyNoticeError(CrawlerError):
+    pass
+

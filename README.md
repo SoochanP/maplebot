@@ -1,6 +1,6 @@
 ﻿# MapleBot
 
-MapleBot is a maintainable command-based MapleStory chatbot backend focused on readable architecture, clean boundaries, and easy future expansion. KakaoTalk integration is currently split into an official Kakao webhook and a simple HTTP bridge for Android MessengerBotR-style clients.
+MapleBot is a maintainable command-based MapleStory chatbot backend. It provides a shared command pipeline for a local CLI, the official Kakao chatbot webhook, and an Android bridge endpoint.
 
 ## Requirements
 
@@ -19,6 +19,7 @@ pip install -e .[dev]
 
 Environment variables:
 
+- `MAPLEBOT_NEXON_API_KEY`: required for NEXON-backed commands, sent as `x-nxopen-api-key`
 - `MAPLEBOT_KAKAO_SKILL_TOKEN`: optional official Kakao webhook secret checked against `X-MapleBot-Token`
 - `MAPLEBOT_BRIDGE_TOKEN`: optional bridge secret checked against `X-MapleBot-Bridge-Token`
 - `MAPLEBOT_KAKAO_REQUEST_TIMEOUT_SECONDS`: shared command execution limit for Kakao and bridge requests, default `4.5`
@@ -27,15 +28,16 @@ Environment variables:
 
 Behavior:
 
+- If `MAPLEBOT_NEXON_API_KEY` is missing, `!헥사`, `!유니온`, `!랭킹`, `!공지`, and `!경험치 히스토리` return a clear configuration error. `!환산` continues to work because it does not call NEXON.
 - If `MAPLEBOT_KAKAO_SKILL_TOKEN` is configured, `POST /kakao/webhook` requires a matching `X-MapleBot-Token` header.
 - If `MAPLEBOT_BRIDGE_TOKEN` is configured, `POST /bridge/message` requires a matching `X-MapleBot-Bridge-Token` header.
-- If either token is not configured, that endpoint remains open for local development and tests.
+- If either webhook token is not configured, that endpoint remains open for local development and tests.
 - `GET /health` is always public.
 
 ## Run Tests
 
 ```bash
-pytest
+.venv\Scripts\python.exe -m pytest
 ```
 
 ## Run The CLI
@@ -55,17 +57,13 @@ https://maplescouter.com/ko/info?name=%EC%B0%BD%ED%82%AC
 ```
 
 ```text
-MapleBot > !경험치 히스토리 창킬
+MapleBot > !공지
 
-[창킬 경험치 히스토리]
+[메이플스토리 최신 공지]
 
-01/08  Lv.289  31.845%
-01/09  Lv.289  33.576%  (+1.731%)
-01/10  Lv.289  35.527%  (+1.951%)
-01/11  Lv.289  40.050%  (+4.523%)
-01/12  Lv.289  41.334%  (+1.284%)
-
-최근 5개 기록 변화: +13,824,848,783,387 EXP (+9.489%)
+1. 09/02 점검 안내
+2. 09/01 이벤트 안내
+3. ...
 ```
 
 ## Run FastAPI
@@ -74,23 +72,11 @@ MapleBot > !경험치 히스토리 창킬
 uvicorn app.main:app --reload
 ```
 
-Health check:
+Available endpoints:
 
-```text
-GET /health
-```
-
-Official Kakao webhook:
-
-```text
-POST /kakao/webhook
-```
-
-Bridge endpoint:
-
-```text
-POST /bridge/message
-```
+- `GET /health`
+- `POST /kakao/webhook`
+- `POST /bridge/message`
 
 Example official Kakao request:
 
@@ -152,44 +138,55 @@ Example bridge response:
 ## Current Supported Commands
 
 - `!환산 캐릭터명`
+- `!헥사 캐릭터명`
+- `!유니온 캐릭터명`
+- `!랭킹 캐릭터명`
+- `!공지`
 - `!경험치 히스토리 캐릭터명`
 
 ## Architecture Overview
 
-- `CommandRouter`: validates input, matches the longest registered command name, routes to the correct handler, and can safely expose a matched command name for logging.
-- `ConvertedStatCommand`: receives the character name, asks the link builder for a URL, and formats the user-facing response.
-- `ExperienceHistoryCommand`: receives the character name, selects the latest five snapshots by timestamp, displays them chronologically, and formats only mathematically safe gain indicators.
-- `Kakao webhook`: validates the minimal Kakao request payload, authenticates the optional secret header, extracts `userRequest.utterance`, dispatches through `CommandRouter`, and formats a `simpleText` response.
-- `Bridge endpoint`: validates the bridge payload, authenticates the optional bridge token, dispatches `message` through `CommandRouter`, and returns a simple JSON reply.
-- `CLI`, Kakao webhook, and bridge endpoint share the same command pipeline and do not duplicate command logic.
-- `MapleScouterLinkBuilder`: owns MapleScouter URL rules and URL encoding.
-- `MapleHistoryCrawler`: owns MapleHiStory-specific `/ajax/*` requests and response parsing.
-- `HttpClientManager`: owns the reusable `httpx.AsyncClient` lifecycle for crawler-based commands.
-- `ApplicationSettings`: owns environment-based webhook/auth/timeout configuration.
-- `Pydantic` models: used for typed command payloads, typed experience history results, webhook payloads, bridge payloads, and settings validation.
+- `CommandRouter`: validates input, matches the longest registered command name, and dispatches to the correct handler.
+- `ConvertedStatCommand`: keeps `!환산` as a link-only command through `MapleScouterLinkBuilder`.
+- `HexaCommand`, `UnionCommand`, `RankingCommand`, `NoticeCommand`, `ExperienceHistoryCommand`: format user-facing text from typed result models.
+- `NexonMapleClient`: owns OCID lookup, NEXON Open API request construction, authentication header injection, date-aware history queries, and provider error translation.
+- `HttpClientManager`: owns the shared `httpx.AsyncClient` lifecycle for CLI and FastAPI.
+- `Kakao webhook` and `bridge endpoint`: authenticate, parse the request, call `CommandRouter`, and format transport-specific responses without command-specific logic.
+- `ApplicationSettings`: owns environment-based tokens, timeouts, and the NEXON API key.
+
+## NEXON Endpoints Used
+
+- `GET /maplestory/v1/id`
+- `GET /maplestory/v1/character/basic`
+- `GET /maplestory/v1/character/hexamatrix`
+- `GET /maplestory/v1/character/hexamatrix-stat`
+- `GET /maplestory/v1/user/union`
+- `GET /maplestory/v1/user/union-artifact`
+- `GET /maplestory/v1/user/union-champion`
+- `GET /maplestory/v1/ranking/overall`
+- `GET /maplestory/v1/notice`
 
 ## Add Another Command
 
 1. Create a new handler in `app/commands/`.
-2. Add any typed request or result models in `app/models/` when the command needs them.
-3. Inject the handler dependency in `build_application_services()` inside `app/bootstrap.py`.
-4. Add router tests and handler tests.
+2. Add or reuse typed models in `app/models/`.
+3. Extend `NexonMapleClient` or another provider client only when external data access is needed.
+4. Register the handler in `build_application_services()` inside `app/bootstrap.py`.
+5. Add router, handler, and provider tests.
 
-## Add Another Crawler
+## Add Another Crawler Or Provider Client
 
-1. Create a crawler module in `app/crawlers/`.
-2. Keep site URLs, headers, selectors, and parsing logic inside that crawler.
+1. Create a provider module under `app/clients/` or `app/crawlers/` depending on whether the source is a structured API or HTML site.
+2. Keep URLs, headers, selectors, and provider-specific parsing inside that module.
 3. Return typed models instead of raw dictionaries.
-4. Inject the crawler into the command handler through the constructor.
-5. Add parser tests and mock-transport tests for networking and error handling.
+4. Inject the provider dependency into the command handler through the constructor.
+5. Add mock-transport tests for networking and parser behavior.
 
 ## Notes
 
-- `!환산` does not crawl MapleScouter and does not call MapleScouter APIs.
-- `!경험치 히스토리` uses MapleHiStory public site endpoints under `/ajax/*` and does not require browser automation in the current implementation.
-- `POST /kakao/webhook` only authenticates the optional skill token, parses Kakao input, calls the existing command pipeline, and formats Kakao output.
-- `POST /bridge/message` only authenticates the optional bridge token, parses bridge input, calls the existing command pipeline, and formats a JSON reply.
+- `!환산` does not call NEXON and remains a MapleScouter link builder command.
+- `!경험치 히스토리` now uses NEXON `character/basic` historical date queries instead of MapleHiStory.
+- Ranking data follows NEXON's documented freshness rules and falls back across the latest two KST dates when needed.
 - The HTTP integrations log concise request outcome data such as command name when derivable, duration, success or failure, and expected application error category.
-- `httpx` remains the shared HTTP client for crawler-based commands.
-- `selectolax` stays in the stack for future HTML parsing needs, but it is not required for the current commands.
-- KakaoTalk channel registration, Android bot scripting, deployment expansion, database, Redis, AI, MCP, and Playwright are intentionally excluded from this phase.
+- No database, Redis, AI, MCP, or Playwright is included in this phase.
+- Render deployment needs `MAPLEBOT_NEXON_API_KEY=<secret>` before the new NEXON-backed commands can work in production.

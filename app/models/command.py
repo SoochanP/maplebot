@@ -6,4 +6,4 @@ class ParsedCommand(BaseModel):
 
     raw_text: str
     command: str
-    character_name: str
+    character_name: str | None = None

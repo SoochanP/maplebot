@@ -34,9 +34,18 @@ class CommandRouter:
         if matched_command_name is None:
             raise UnsupportedCommandError("지원하지 않는 명령어입니다.")
 
-        character_name = command_body[len(matched_command_name):].strip()
-        if not character_name:
-            raise InvalidCommandError("캐릭터명을 입력해주세요.")
+        handler = self._handlers[matched_command_name]
+        argument_text = command_body[len(matched_command_name):].strip()
+        if handler.requires_character_name:
+            if not argument_text:
+                raise InvalidCommandError("캐릭터명을 입력해주세요.")
+            character_name = argument_text
+        else:
+            if argument_text:
+                raise InvalidCommandError(
+                    f"명령어 형식이 올바르지 않습니다. 예시: {handler.resolved_usage_example}"
+                )
+            character_name = None
 
         return ParsedCommand(
             raw_text=cleaned,

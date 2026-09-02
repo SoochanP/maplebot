@@ -1,0 +1,48 @@
+﻿{
+  "date": null,
+  "union_champion": [
+    {
+      "champion_name": "대표캐릭터",
+      "champion_slot": 1,
+      "champion_grade": "SSS",
+      "champion_class": "다크나이트",
+      "champion_badge_info": [
+        {"stat": "올스탯 20, 최대 HP/MP 1000 증가"},
+        {"stat": "공격력/마력 10 증가"},
+        {"stat": "보스 몬스터 공격 시 데미지 5% 증가"}
+      ]
+    },
+    {
+      "champion_name": "부캐A",
+      "champion_slot": 2,
+      "champion_grade": "SS",
+      "champion_class": "데몬어벤져",
+      "champion_badge_info": [
+        {"stat": "올스탯 20, 최대 HP/MP 1000 증가"}
+      ]
+    },
+    {
+      "champion_name": "부캐B",
+      "champion_slot": 3,
+      "champion_grade": "SS",
+      "champion_class": "바이퍼",
+      "champion_badge_info": [
+        {"stat": "공격력/마력 10 증가"}
+      ]
+    },
+    {
+      "champion_name": "부캐C",
+      "champion_slot": 4,
+      "champion_grade": "C",
+      "champion_class": "에반",
+      "champion_badge_info": []
+    }
+  ],
+  "champion_badge_total_info": [
+    {"stat": "올스탯 80, 최대 HP/MP 4000 증가"},
+    {"stat": "공격력/마력 40 증가"},
+    {"stat": "보스 몬스터 공격 시 데미지 20% 증가"},
+    {"stat": "크리티컬 데미지 12.00% 증가"},
+    {"stat": "방어율 무시 5% 증가"}
+  ]
+}

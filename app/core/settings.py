@@ -12,6 +12,7 @@ class ApplicationSettings(BaseModel):
 
     kakao_skill_token: str | None = None
     bridge_token: str | None = None
+    nexon_api_key: str | None = None
     kakao_request_timeout_seconds: float = Field(default=4.5, gt=0, le=5.0)
     http_request_timeout_seconds: float = Field(default=3.0, gt=0, le=4.5)
     http_connect_timeout_seconds: float = Field(default=1.0, gt=0, le=3.0)
@@ -21,6 +22,7 @@ class ApplicationSettings(BaseModel):
         raw_values = {
             "kakao_skill_token": _read_optional_string_env("MAPLEBOT_KAKAO_SKILL_TOKEN"),
             "bridge_token": _read_optional_string_env("MAPLEBOT_BRIDGE_TOKEN"),
+            "nexon_api_key": _read_optional_string_env("MAPLEBOT_NEXON_API_KEY"),
             "kakao_request_timeout_seconds": os.getenv("MAPLEBOT_KAKAO_REQUEST_TIMEOUT_SECONDS"),
             "http_request_timeout_seconds": os.getenv("MAPLEBOT_HTTP_REQUEST_TIMEOUT_SECONDS"),
             "http_connect_timeout_seconds": os.getenv("MAPLEBOT_HTTP_CONNECT_TIMEOUT_SECONDS"),
@@ -51,3 +53,4 @@ def _read_optional_string_env(name: str) -> str | None:
 
     stripped_value = value.strip()
     return stripped_value or None
+

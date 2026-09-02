@@ -26,7 +26,8 @@ class ExperienceHistoryCommand(CommandHandler):
         self._recent_entry_count = recent_entry_count
 
     async def handle(self, command: ParsedCommand) -> str:
-        history = await self._crawler.fetch_experience_history(command.character_name)
+        character_name = self.require_character_name(command)
+        history = await self._crawler.fetch_experience_history(character_name)
         return self._format_response(history)
 
     def _format_response(self, history: ExperienceHistory) -> str:
