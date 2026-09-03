@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from app.api.kakao import KAKAO_SKILL_TOKEN_HEADER
 from tests.api_test_support import (
@@ -10,13 +10,23 @@ from tests.api_test_support import (
 
 
 EXPECTED_HISTORY_REPLY = (
-    "[\ucc3d\ud0ac] - \uc2a4\uce74\ub2c8\uc544\n\n"
-    "01\uc6d4 11\uc77c : Lv.289 10.000%\n"
-    "01\uc6d4 12\uc77c : Lv.289 12.500% (+250 EXP)\n\n"
-    "\uc77c\uc77c \ud3c9\uade0 \ud68d\ub4dd\ub7c9: 250 EXP\n"
-    "\ub0a8\uc740 \uacbd\ud5d8\uce58\ub7c9: 8,750 EXP\n"
-    "\uc608\uc0c1 \ub808\ubca8\uc5c5 \ub0a0\uc9dc:\n"
-    "25\ub144 02\uc6d4 16\uc77c (35\uc77c \ud6c4)"
+    "[창킬] - 스카니아\n\n"
+    "01월 11일 : Lv.289 10.000%\n"
+    "01월 12일 : Lv.289 12.500% (+250 EXP)\n\n"
+    "일일 평균 획득량: 250 EXP\n"
+    "남은 경험치량: 8,750 EXP\n"
+    "예상 레벨업 날짜:\n"
+    "25년 02월 16일 (35일 후)"
+)
+
+EXPECTED_HEXA_REPLY = (
+    "[창킬] 헥사 스킬 정보\n\n"
+    "• [스킬] Lv.18 데드 스페이스\n"
+    "• [마스] Lv.30 다크 임페일 VI/다크 신서시스 VI\n"
+    "• [강화] Lv.30 다크 스피어\n"
+    "• [공용] Lv.30 솔 야누스\n\n"
+    "• 누적 솔 에르다 : 474 / 564 (84%)\n"
+    "• 누적 조각 : 13,503 / 16,403 (82%)"
 )
 
 
@@ -36,7 +46,7 @@ def test_kakao_webhook_allows_requests_without_token_when_not_configured() -> No
         app,
         "POST",
         "/kakao/webhook",
-        json={"userRequest": {"utterance": "!\ud658\uc0b0 \ucc3d\ud0ac"}},
+        json={"userRequest": {"utterance": "!환산 창킬"}},
     )
 
     assert response.status_code == 200
@@ -46,7 +56,7 @@ def test_kakao_webhook_allows_requests_without_token_when_not_configured() -> No
             "outputs": [
                 {
                     "simpleText": {
-                        "text": "[\ucc3d\ud0ac \ud658\uc0b0\uc8fc\uc2a4\ud0ef]\n\nhttps://maplescouter.com/ko/info?name=%EC%B0%BD%ED%82%AC"
+                        "text": "[창킬 환산주스탯]\n\nhttps://maplescouter.com/ko/info?name=%EC%B0%BD%ED%82%AC"
                     }
                 }
             ]
@@ -62,7 +72,7 @@ def test_kakao_webhook_accepts_correct_secret_header() -> None:
         "POST",
         "/kakao/webhook",
         headers={KAKAO_SKILL_TOKEN_HEADER: "secret-token"},
-        json={"userRequest": {"utterance": "!\ud658\uc0b0 \ucc3d\ud0ac"}},
+        json={"userRequest": {"utterance": "!환산 창킬"}},
     )
 
     assert response.status_code == 200
@@ -72,7 +82,7 @@ def test_kakao_webhook_accepts_correct_secret_header() -> None:
             "outputs": [
                 {
                     "simpleText": {
-                        "text": "[\ucc3d\ud0ac \ud658\uc0b0\uc8fc\uc2a4\ud0ef]\n\nhttps://maplescouter.com/ko/info?name=%EC%B0%BD%ED%82%AC"
+                        "text": "[창킬 환산주스탯]\n\nhttps://maplescouter.com/ko/info?name=%EC%B0%BD%ED%82%AC"
                     }
                 }
             ]
@@ -87,7 +97,7 @@ def test_kakao_webhook_rejects_missing_secret_header() -> None:
         app,
         "POST",
         "/kakao/webhook",
-        json={"userRequest": {"utterance": "!\ud658\uc0b0 \ucc3d\ud0ac"}},
+        json={"userRequest": {"utterance": "!환산 창킬"}},
     )
 
     assert response.status_code == 401
@@ -102,7 +112,7 @@ def test_kakao_webhook_rejects_incorrect_secret_header() -> None:
         "POST",
         "/kakao/webhook",
         headers={KAKAO_SKILL_TOKEN_HEADER: "wrong-token"},
-        json={"userRequest": {"utterance": "!\ud658\uc0b0 \ucc3d\ud0ac"}},
+        json={"userRequest": {"utterance": "!환산 창킬"}},
     )
 
     assert response.status_code == 401
@@ -117,11 +127,11 @@ def test_kakao_webhook_valid_experience_history_command() -> None:
         "POST",
         "/kakao/webhook",
         headers={KAKAO_SKILL_TOKEN_HEADER: "secret-token"},
-        json={"userRequest": {"utterance": "!\uacbd\ud5d8\uce58 \ud788\uc2a4\ud1a0\ub9ac \ucc3d\ud0ac"}},
+        json={"userRequest": {"utterance": "!경험치 히스토리 창킬"}},
     )
 
     assert response.status_code == 200
-    assert history_crawler.received_names == ["\ucc3d\ud0ac"]
+    assert history_crawler.received_names == ["창킬"]
     assert response.json() == {
         "version": "2.0",
         "template": {
@@ -129,6 +139,33 @@ def test_kakao_webhook_valid_experience_history_command() -> None:
                 {
                     "simpleText": {
                         "text": EXPECTED_HISTORY_REPLY
+                    }
+                }
+            ]
+        },
+    }
+
+
+def test_kakao_webhook_valid_hexa_command_uses_shared_command_pipeline() -> None:
+    app, history_crawler = build_test_app(kakao_skill_token="secret-token")
+
+    response = request_json(
+        app,
+        "POST",
+        "/kakao/webhook",
+        headers={KAKAO_SKILL_TOKEN_HEADER: "secret-token"},
+        json={"userRequest": {"utterance": "!헥사 창킬"}},
+    )
+
+    assert response.status_code == 200
+    assert history_crawler.hexa_received_names == ["창킬"]
+    assert response.json() == {
+        "version": "2.0",
+        "template": {
+            "outputs": [
+                {
+                    "simpleText": {
+                        "text": EXPECTED_HEXA_REPLY
                     }
                 }
             ]
@@ -144,7 +181,7 @@ def test_kakao_webhook_returns_user_friendly_error_for_unsupported_command() -> 
         "POST",
         "/kakao/webhook",
         headers={KAKAO_SKILL_TOKEN_HEADER: "secret-token"},
-        json={"userRequest": {"utterance": "!\uc5c6\ub294\uba85\ub839\uc5b4 \ucc3d\ud0ac"}},
+        json={"userRequest": {"utterance": "!없는명령어 창킬"}},
     )
 
     assert response.status_code == 200
@@ -154,7 +191,7 @@ def test_kakao_webhook_returns_user_friendly_error_for_unsupported_command() -> 
             "outputs": [
                 {
                     "simpleText": {
-                        "text": "\uc9c0\uc6d0\ud558\uc9c0 \uc54a\ub294 \uba85\ub839\uc5b4\uc785\ub2c8\ub2e4."
+                        "text": "지원하지 않는 명령어입니다."
                     }
                 }
             ]
@@ -170,7 +207,7 @@ def test_kakao_webhook_returns_user_friendly_error_for_missing_character_name() 
         "POST",
         "/kakao/webhook",
         headers={KAKAO_SKILL_TOKEN_HEADER: "secret-token"},
-        json={"userRequest": {"utterance": "!\ud658\uc0b0"}},
+        json={"userRequest": {"utterance": "!환산"}},
     )
 
     assert response.status_code == 200
@@ -180,7 +217,7 @@ def test_kakao_webhook_returns_user_friendly_error_for_missing_character_name() 
             "outputs": [
                 {
                     "simpleText": {
-                        "text": "\uce90\ub9ad\ud130\uba85\uc744 \uc785\ub825\ud574\uc8fc\uc138\uc694."
+                        "text": "캐릭터명을 입력해주세요."
                     }
                 }
             ]
@@ -206,7 +243,7 @@ def test_kakao_webhook_rejects_malformed_payload() -> None:
             "outputs": [
                 {
                     "simpleText": {
-                        "text": "\uc798\ubabb\ub41c \uc694\uccad\uc785\ub2c8\ub2e4."
+                        "text": "잘못된 요청입니다."
                     }
                 }
             ]
@@ -225,18 +262,18 @@ def test_kakao_webhook_maps_external_provider_timeout_to_user_friendly_error() -
         "POST",
         "/kakao/webhook",
         headers={KAKAO_SKILL_TOKEN_HEADER: "secret-token"},
-        json={"userRequest": {"utterance": "!\uacbd\ud5d8\uce58 \ud788\uc2a4\ud1a0\ub9ac \ucc3d\ud0ac"}},
+        json={"userRequest": {"utterance": "!경험치 히스토리 창킬"}},
     )
 
     assert response.status_code == 200
-    assert history_crawler.received_names == ["\ucc3d\ud0ac"]
+    assert history_crawler.received_names == ["창킬"]
     assert response.json() == {
         "version": "2.0",
         "template": {
             "outputs": [
                 {
                     "simpleText": {
-                        "text": "\ud604\uc7ac \uc870\ud68c \uc0ac\uc774\ud2b8\uc5d0 \uc811\uc18d\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.\n\uc7a0\uc2dc \ud6c4 \ub2e4\uc2dc \uc2dc\ub3c4\ud574\uc8fc\uc138\uc694."
+                        "text": "현재 조회 사이트에 접속할 수 없습니다.\n잠시 후 다시 시도해주세요."
                     }
                 }
             ]
@@ -256,18 +293,18 @@ def test_kakao_webhook_stops_slow_commands_before_skill_timeout() -> None:
         "POST",
         "/kakao/webhook",
         headers={KAKAO_SKILL_TOKEN_HEADER: "secret-token"},
-        json={"userRequest": {"utterance": "!\uacbd\ud5d8\uce58 \ud788\uc2a4\ud1a0\ub9ac \ucc3d\ud0ac"}},
+        json={"userRequest": {"utterance": "!경험치 히스토리 창킬"}},
     )
 
     assert response.status_code == 200
-    assert history_crawler.received_names == ["\ucc3d\ud0ac"]
+    assert history_crawler.received_names == ["창킬"]
     assert response.json() == {
         "version": "2.0",
         "template": {
             "outputs": [
                 {
                     "simpleText": {
-                        "text": "\ud604\uc7ac \uc870\ud68c \uc0ac\uc774\ud2b8\uc5d0 \uc811\uc18d\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.\n\uc7a0\uc2dc \ud6c4 \ub2e4\uc2dc \uc2dc\ub3c4\ud574\uc8fc\uc138\uc694."
+                        "text": "현재 조회 사이트에 접속할 수 없습니다.\n잠시 후 다시 시도해주세요."
                     }
                 }
             ]

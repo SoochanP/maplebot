@@ -1,231 +1,155 @@
 from __future__ import annotations
 
-from app.models.hexa_cost import HexaCostProfileSummary, HexaCostSummary
+import logging
+from collections.abc import Sequence
 
-
-_PROFILE_ORDER = (
-    "6\ucc28 \uc2a4\ud0ac",
-    "3rd \uc2a4\ud0ac",
-    "\ub9c8\uc2a4\ud130\ub9ac",
-    "5\ucc28 \uac15\ud654",
-    "\uacf5\uc6a9",
-    "\uc9c1\uc5c5\uad70 \uacf5\uc6a9",
+from app.data.hexa_cost_tables import (
+    HEXA_COST_TABLES,
+    PROFILE_CLASS_COMMON,
+    PROFILE_COMMON,
+    PROFILE_ENHANCEMENT,
+    PROFILE_EXISTING_SKILL,
+    PROFILE_MASTERY,
+    PROFILE_ORDER,
+    PROFILE_THIRD_SKILL,
+)
+from app.data.hexa_special_profiles import (
+    CLASS_COMMON_CORE_NAMES,
+    THIRD_SKILL_CORE_NAMES,
+)
+from app.models.hexa import HexaCore
+from app.models.hexa_cost import (
+    HexaCostProfileSummary,
+    HexaCostSummary,
+    HexaCumulativeCostSummary,
+    HexaResourceProgress,
 )
 
-_HEXA_COST_TABLES: dict[str, tuple[tuple[int, int], ...]] = {
-    "6\ucc28 \uc2a4\ud0ac": (
-        (5, 100),
-        (1, 30),
-        (1, 35),
-        (1, 40),
-        (2, 45),
-        (2, 50),
-        (2, 55),
-        (3, 60),
-        (3, 65),
-        (10, 200),
-        (3, 80),
-        (3, 90),
-        (4, 100),
-        (4, 110),
-        (4, 120),
-        (4, 130),
-        (4, 140),
-        (4, 150),
-        (5, 160),
-        (15, 350),
-        (5, 170),
-        (5, 180),
-        (5, 190),
-        (5, 200),
-        (5, 210),
-        (6, 220),
-        (6, 230),
-        (6, 240),
-        (7, 250),
-        (20, 500),
-    ),
-    "3rd \uc2a4\ud0ac": (
-        (7, 140),
-        (1, 21),
-        (1, 26),
-        (1, 30),
-        (1, 34),
-        (2, 38),
-        (2, 43),
-        (2, 47),
-        (2, 51),
-        (8, 142),
-        (2, 62),
-        (2, 69),
-        (3, 77),
-        (3, 83),
-        (3, 91),
-        (3, 98),
-        (3, 105),
-        (3, 112),
-        (3, 120),
-        (12, 252),
-        (4, 128),
-        (4, 136),
-        (4, 145),
-        (4, 152),
-        (4, 161),
-        (4, 168),
-        (5, 177),
-        (5, 184),
-        (5, 193),
-        (14, 357),
-    ),
-    "\ub9c8\uc2a4\ud130\ub9ac": (
-        (3, 50),
-        (1, 15),
-        (1, 18),
-        (1, 20),
-        (1, 23),
-        (1, 25),
-        (1, 28),
-        (2, 30),
-        (2, 33),
-        (5, 100),
-        (2, 40),
-        (2, 45),
-        (2, 50),
-        (2, 55),
-        (2, 60),
-        (2, 65),
-        (2, 70),
-        (2, 75),
-        (3, 80),
-        (8, 175),
-        (3, 85),
-        (3, 90),
-        (3, 95),
-        (3, 100),
-        (3, 105),
-        (3, 110),
-        (3, 115),
-        (3, 120),
-        (4, 125),
-        (10, 250),
-    ),
-    "5\ucc28 \uac15\ud654": (
-        (4, 75),
-        (1, 23),
-        (1, 27),
-        (1, 30),
-        (2, 34),
-        (2, 38),
-        (2, 42),
-        (3, 45),
-        (3, 49),
-        (8, 150),
-        (3, 60),
-        (3, 68),
-        (3, 75),
-        (3, 83),
-        (3, 90),
-        (3, 98),
-        (3, 105),
-        (3, 113),
-        (4, 120),
-        (12, 263),
-        (4, 128),
-        (4, 135),
-        (4, 143),
-        (4, 150),
-        (4, 158),
-        (5, 165),
-        (5, 173),
-        (5, 180),
-        (6, 188),
-        (15, 375),
-    ),
-    "\uacf5\uc6a9": (
-        (7, 125),
-        (2, 38),
-        (2, 44),
-        (2, 50),
-        (3, 57),
-        (3, 63),
-        (3, 69),
-        (5, 75),
-        (5, 82),
-        (14, 300),
-        (5, 110),
-        (5, 124),
-        (6, 138),
-        (6, 152),
-        (6, 165),
-        (6, 179),
-        (6, 193),
-        (6, 207),
-        (7, 220),
-        (17, 525),
-        (7, 234),
-        (7, 248),
-        (7, 262),
-        (7, 275),
-        (7, 289),
-        (9, 303),
-        (9, 317),
-        (9, 330),
-        (10, 344),
-        (20, 750),
-    ),
-    "\uc9c1\uc5c5\uad70 \uacf5\uc6a9": (
-        (4, 90),
-        (1, 25),
-        (1, 30),
-        (1, 35),
-        (2, 40),
-        (2, 45),
-        (2, 50),
-        (3, 55),
-        (3, 60),
-        (9, 180),
-        (3, 73),
-        (3, 81),
-        (3, 90),
-        (3, 98),
-        (4, 107),
-        (4, 115),
-        (4, 124),
-        (4, 132),
-        (4, 141),
-        (14, 315),
-        (4, 151),
-        (5, 160),
-        (5, 170),
-        (5, 179),
-        (5, 189),
-        (5, 198),
-        (5, 208),
-        (5, 217),
-        (6, 227),
-        (18, 450),
-    ),
-}
+
+logger = logging.getLogger("maplebot.hexa_costs")
 
 
 def calculate_hexa_cost_summary(current_level: int, target_level: int) -> HexaCostSummary:
-    _validate_levels(current_level, target_level)
+    _validate_transition_levels(current_level, target_level)
 
-    profiles = [
-        HexaCostProfileSummary(
-            profile_name=profile_name,
-            sol_erda=sum(cost[0] for cost in _HEXA_COST_TABLES[profile_name][current_level:target_level]),
-            fragments=sum(cost[1] for cost in _HEXA_COST_TABLES[profile_name][current_level:target_level]),
-        )
-        for profile_name in _PROFILE_ORDER
-    ]
     return HexaCostSummary(
         current_level=current_level,
         target_level=target_level,
-        profiles=profiles,
+        profiles=[
+            calculate_hexa_profile_cost(profile_name, current_level, target_level)
+            for profile_name in PROFILE_ORDER
+        ],
     )
 
 
-def _validate_levels(current_level: int, target_level: int) -> None:
+def calculate_hexa_profile_cost(
+    profile_name: str,
+    current_level: int,
+    target_level: int,
+) -> HexaCostProfileSummary:
+    _validate_profile_levels(current_level, target_level)
+    cost_table = _get_cost_table(profile_name)
+    return HexaCostProfileSummary(
+        profile_name=profile_name,
+        sol_erda=sum(cost[0] for cost in cost_table[current_level:target_level]),
+        fragments=sum(cost[1] for cost in cost_table[current_level:target_level]),
+    )
+
+
+def calculate_hexa_cumulative_cost(cores: Sequence[HexaCore]) -> HexaCumulativeCostSummary:
+    if not cores:
+        return HexaCumulativeCostSummary()
+
+    current_sol_erda = 0
+    max_sol_erda = 0
+    current_fragments = 0
+    max_fragments = 0
+    unresolved_core_names: list[str] = []
+
+    for core in cores:
+        profile_name = resolve_hexa_cost_profile(core.name, core.core_type)
+        if profile_name is None:
+            _append_unresolved_core(unresolved_core_names, core.name)
+            continue
+
+        try:
+            current_cost = calculate_hexa_profile_cost(profile_name, 0, core.level)
+            max_cost = calculate_hexa_profile_cost(profile_name, 0, 30)
+        except ValueError:
+            _append_unresolved_core(unresolved_core_names, core.name)
+            continue
+
+        current_sol_erda += current_cost.sol_erda
+        max_sol_erda += max_cost.sol_erda
+        current_fragments += current_cost.fragments
+        max_fragments += max_cost.fragments
+
+    if unresolved_core_names:
+        logger.warning("hexa_cost unresolved_cores=%s", ", ".join(unresolved_core_names))
+        return HexaCumulativeCostSummary(unresolved_core_names=unresolved_core_names)
+
+    return HexaCumulativeCostSummary(
+        sol_erda=HexaResourceProgress(
+            current=current_sol_erda,
+            maximum=max_sol_erda,
+            percent=_calculate_progress_percent(current_sol_erda, max_sol_erda),
+        ),
+        fragments=HexaResourceProgress(
+            current=current_fragments,
+            maximum=max_fragments,
+            percent=_calculate_progress_percent(current_fragments, max_fragments),
+        ),
+    )
+
+
+def resolve_hexa_cost_profile(core_name: str, core_type: str | None) -> str | None:
+    normalized_name = core_name.strip()
+    normalized_type = None if core_type is None else core_type.strip()
+
+    if not normalized_name or not normalized_type:
+        return None
+
+    if normalized_type == "마스터리 코어":
+        return PROFILE_MASTERY
+    if normalized_type == "강화 코어":
+        return PROFILE_ENHANCEMENT
+    if normalized_type == "스킬 코어":
+        if normalized_name in THIRD_SKILL_CORE_NAMES:
+            return PROFILE_THIRD_SKILL
+        return PROFILE_EXISTING_SKILL
+    if normalized_type == "공용 코어":
+        if normalized_name in CLASS_COMMON_CORE_NAMES:
+            return PROFILE_CLASS_COMMON
+        return PROFILE_COMMON
+
+    return None
+
+
+def _append_unresolved_core(unresolved_core_names: list[str], core_name: str) -> None:
+    if core_name not in unresolved_core_names:
+        unresolved_core_names.append(core_name)
+
+
+def _get_cost_table(profile_name: str) -> tuple[tuple[int, int], ...]:
+    try:
+        return HEXA_COST_TABLES[profile_name]
+    except KeyError as exc:
+        raise ValueError(f"unknown HEXA cost profile: {profile_name}") from exc
+
+
+def _calculate_progress_percent(current: int, maximum: int) -> int:
+    if maximum <= 0:
+        return 0
+    if current >= maximum:
+        return 100
+    return min((current * 100) // maximum, 99)
+
+
+def _validate_transition_levels(current_level: int, target_level: int) -> None:
     if current_level < 0 or target_level > 30 or current_level >= target_level:
         raise ValueError("level range must satisfy 0 <= current_level < target_level <= 30")
+
+
+def _validate_profile_levels(current_level: int, target_level: int) -> None:
+    if current_level < 0 or target_level > 30 or current_level > target_level:
+        raise ValueError("level range must satisfy 0 <= current_level <= target_level <= 30")

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import asyncio
 
@@ -24,7 +24,7 @@ class FakeHexaReader:
         return self.overview
 
 
-def test_hexa_command_formats_grouped_core_and_stat_sections() -> None:
+def test_hexa_command_formats_compact_core_list_and_cumulative_cost() -> None:
     reader = FakeHexaReader(
         HexaOverview(
             character_name="창킬",
@@ -42,6 +42,12 @@ def test_hexa_command_formats_grouped_core_and_stat_sections() -> None:
                     linked_skills=["다크 임페일 VI", "다크 신서시스 VI"],
                 ),
                 HexaCore(
+                    name="다크 스피어",
+                    level=30,
+                    core_type="강화 코어",
+                    linked_skills=["다크 스피어 강화"],
+                ),
+                HexaCore(
                     name="솔 야누스",
                     level=30,
                     core_type="공용 코어",
@@ -57,24 +63,9 @@ def test_hexa_command_formats_grouped_core_and_stat_sections() -> None:
                             main_stat_level=8,
                             sub_stat_name_1="주력 스탯 증가",
                             sub_stat_level_1=6,
-                            sub_stat_name_2="크리티컬 데미지 증가",
-                            sub_stat_level_2=6,
                         )
                     ],
-                ),
-                HexaStatSet(
-                    label="HEXA 스탯 II",
-                    cores=[
-                        HexaStatCore(
-                            main_stat_name="주력 스탯 증가",
-                            main_stat_level=5,
-                            sub_stat_name_1="크리티컬 데미지 증가",
-                            sub_stat_level_1=6,
-                            sub_stat_name_2="공격력 증가",
-                            sub_stat_level_2=9,
-                        )
-                    ],
-                ),
+                )
             ],
         )
     )
@@ -92,20 +83,57 @@ def test_hexa_command_formats_grouped_core_and_stat_sections() -> None:
 
     assert reader.received_names == ["창킬"]
     assert result == (
-        "[창킬 HEXA]\n\n"
-        "HEXA 코어\n"
-        "[스킬 코어]\n"
-        "- 데드 스페이스 Lv.18\n\n"
-        "[마스터리 코어]\n"
-        "- 다크 임페일 VI/다크 신서시스 VI Lv.30\n"
-        "  연결 스킬: 다크 임페일 VI, 다크 신서시스 VI\n\n"
-        "[공용 코어]\n"
-        "- 솔 야누스 Lv.30\n"
-        "  연결 스킬: 솔 야누스, 솔 야누스 : 새벽, 솔 야누스 : 황혼\n\n"
-        "HEXA 스탯\n"
-        "- I: 공격력 증가 Lv.8 / 주력 스탯 증가 Lv.6 / 크리티컬 데미지 증가 Lv.6\n"
-        "- II: 주력 스탯 증가 Lv.5 / 크리티컬 데미지 증가 Lv.6 / 공격력 증가 Lv.9"
+        "[창킬] 헥사 스킬 정보\n\n"
+        "• [스킬] Lv.18 데드 스페이스\n"
+        "• [마스] Lv.30 다크 임페일 VI/다크 신서시스 VI\n"
+        "• [강화] Lv.30 다크 스피어\n"
+        "• [공용] Lv.30 솔 야누스\n\n"
+        "• 누적 솔 에르다 : 474 / 564 (84%)\n"
+        "• 누적 조각 : 13,503 / 16,403 (82%)"
     )
+    assert "연결 스킬" not in result
+    assert "HEXA 스탯" not in result
+
+
+def test_hexa_command_uses_existing_skill_cost_for_unregistered_skill_core() -> None:
+    reader = FakeHexaReader(
+        HexaOverview(
+            character_name="창킬",
+            cores=[
+                HexaCore(
+                    name="미등록 헥사 코어",
+                    level=12,
+                    core_type="스킬 코어",
+                    linked_skills=["미등록 헥사 코어"],
+                )
+            ],
+            stat_sets=[
+                HexaStatSet(
+                    label="HEXA 스탯 I",
+                    cores=[HexaStatCore(main_stat_name="공격력 증가", main_stat_level=8)],
+                )
+            ],
+        )
+    )
+    command = HexaCommand(reader)
+
+    result = asyncio.run(
+        command.handle(
+            ParsedCommand(
+                raw_text="!헥사 창킬",
+                command="헥사",
+                character_name="창킬",
+            )
+        )
+    )
+
+    assert result == (
+        "[창킬] 헥사 스킬 정보\n\n"
+        "• [스킬] Lv.12 미등록 헥사 코어\n\n"
+        "• 누적 솔 에르다 : 36 / 150 (24%)\n"
+        "• 누적 조각 : 850 / 4,500 (18%)"
+    )
+    assert "HEXA 스탯" not in result
 
 
 def test_hexa_command_propagates_empty_provider_data() -> None:

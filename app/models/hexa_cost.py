@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -21,3 +21,19 @@ class HexaCostSummary(BaseModel):
     current_level: int
     target_level: int
     profiles: list[HexaCostProfileSummary] = Field(default_factory=list)
+
+
+class HexaResourceProgress(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    current: int
+    maximum: int
+    percent: int
+
+
+class HexaCumulativeCostSummary(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    sol_erda: HexaResourceProgress | None = None
+    fragments: HexaResourceProgress | None = None
+    unresolved_core_names: list[str] = Field(default_factory=list)

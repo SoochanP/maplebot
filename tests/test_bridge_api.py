@@ -1,39 +1,49 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from app.api.bridge import BRIDGE_TOKEN_HEADER
 from tests.api_test_support import FakeHistoryCrawler, build_test_app, request_json
 
 
 EXPECTED_HISTORY_REPLY = (
-    "[\ucc3d\ud0ac] - \uc2a4\uce74\ub2c8\uc544\n\n"
-    "01\uc6d4 11\uc77c : Lv.289 10.000%\n"
-    "01\uc6d4 12\uc77c : Lv.289 12.500% (+250 EXP)\n\n"
-    "\uc77c\uc77c \ud3c9\uade0 \ud68d\ub4dd\ub7c9: 250 EXP\n"
-    "\ub0a8\uc740 \uacbd\ud5d8\uce58\ub7c9: 8,750 EXP\n"
-    "\uc608\uc0c1 \ub808\ubca8\uc5c5 \ub0a0\uc9dc:\n"
-    "25\ub144 02\uc6d4 16\uc77c (35\uc77c \ud6c4)"
+    "[창킬] - 스카니아\n\n"
+    "01월 11일 : Lv.289 10.000%\n"
+    "01월 12일 : Lv.289 12.500% (+250 EXP)\n\n"
+    "일일 평균 획득량: 250 EXP\n"
+    "남은 경험치량: 8,750 EXP\n"
+    "예상 레벨업 날짜:\n"
+    "25년 02월 16일 (35일 후)"
+)
+
+EXPECTED_HEXA_REPLY = (
+    "[창킬] 헥사 스킬 정보\n\n"
+    "• [스킬] Lv.18 데드 스페이스\n"
+    "• [마스] Lv.30 다크 임페일 VI/다크 신서시스 VI\n"
+    "• [강화] Lv.30 다크 스피어\n"
+    "• [공용] Lv.30 솔 야누스\n\n"
+    "• 누적 솔 에르다 : 474 / 564 (84%)\n"
+    "• 누적 조각 : 13,503 / 16,403 (82%)"
 )
 
 EXPECTED_HEXA_COST_REPLY = (
-    "[HEXA \uac15\ud654 \ube44\uc6a9 1 \u2192 30]\n\n"
-    "6\ucc28 \uc2a4\ud0ac\n"
-    "\uc194 \uc5d0\ub974\ub2e4: 145\uac1c (\uae30\uc6b4 145,000)\n"
-    "\uc870\uac01: 4,400\uac1c\n\n"
-    "3rd \uc2a4\ud0ac\n"
-    "\uc194 \uc5d0\ub974\ub2e4: 110\uac1c (\uae30\uc6b4 110,000)\n"
-    "\uc870\uac01: 3,302\uac1c\n\n"
-    "\ub9c8\uc2a4\ud130\ub9ac\n"
-    "\uc194 \uc5d0\ub974\ub2e4: 80\uac1c (\uae30\uc6b4 80,000)\n"
-    "\uc870\uac01: 2,202\uac1c\n\n"
-    "5\ucc28 \uac15\ud654\n"
-    "\uc194 \uc5d0\ub974\ub2e4: 119\uac1c (\uae30\uc6b4 119,000)\n"
-    "\uc870\uac01: 3,308\uac1c\n\n"
-    "\uacf5\uc6a9\n"
-    "\uc194 \uc5d0\ub974\ub2e4: 201\uac1c (\uae30\uc6b4 201,000)\n"
-    "\uc870\uac01: 6,143\uac1c\n\n"
-    "\uc9c1\uc5c5\uad70 \uacf5\uc6a9\n"
-    "\uc194 \uc5d0\ub974\ub2e4: 133\uac1c (\uae30\uc6b4 133,000)\n"
-    "\uc870\uac01: 3,945\uac1c"
+    "[HEXA 강화 비용 1 → 30]\n\n"
+    "6차 스킬\n"
+    "솔 에르다: 145개 (기운 145,000)\n"
+    "조각: 4,400개\n\n"
+    "3rd 스킬\n"
+    "솔 에르다: 110개 (기운 110,000)\n"
+    "조각: 3,302개\n\n"
+    "마스터리\n"
+    "솔 에르다: 80개 (기운 80,000)\n"
+    "조각: 2,202개\n\n"
+    "5차 강화\n"
+    "솔 에르다: 119개 (기운 119,000)\n"
+    "조각: 3,308개\n\n"
+    "공용\n"
+    "솔 에르다: 201개 (기운 201,000)\n"
+    "조각: 6,143개\n\n"
+    "직업군 공용\n"
+    "솔 에르다: 133개 (기운 133,000)\n"
+    "조각: 3,945개"
 )
 
 
@@ -46,15 +56,15 @@ def test_bridge_message_valid_converted_stat_command() -> None:
         "/bridge/message",
         headers={BRIDGE_TOKEN_HEADER: "bridge-secret"},
         json={
-            "room": "\uba54\uc774\ud50c \ub2e8\ud1a1\ubc29",
-            "sender": "\uc0ac\uc6a9\uc790",
-            "message": "!\ud658\uc0b0 \ucc3d\ud0ac",
+            "room": "메이플 단톡방",
+            "sender": "사용자",
+            "message": "!환산 창킬",
         },
     )
 
     assert response.status_code == 200
     assert response.json() == {
-        "reply": "[\ucc3d\ud0ac \ud658\uc0b0\uc8fc\uc2a4\ud0ef]\n\nhttps://maplescouter.com/ko/info?name=%EC%B0%BD%ED%82%AC"
+        "reply": "[창킬 환산주스탯]\n\nhttps://maplescouter.com/ko/info?name=%EC%B0%BD%ED%82%AC"
     }
 
 
@@ -67,14 +77,14 @@ def test_bridge_message_valid_experience_history_command() -> None:
         "/bridge/message",
         headers={BRIDGE_TOKEN_HEADER: "bridge-secret"},
         json={
-            "room": "\uba54\uc774\ud50c \ub2e8\ud1a1\ubc29",
-            "sender": "\uc0ac\uc6a9\uc790",
-            "message": "!\uacbd\ud5d8\uce58 \ud788\uc2a4\ud1a0\ub9ac \ucc3d\ud0ac",
+            "room": "메이플 단톡방",
+            "sender": "사용자",
+            "message": "!경험치 히스토리 창킬",
         },
     )
 
     assert response.status_code == 200
-    assert history_crawler.received_names == ["\ucc3d\ud0ac"]
+    assert history_crawler.received_names == ["창킬"]
     assert response.json() == {"reply": EXPECTED_HISTORY_REPLY}
 
 
@@ -86,11 +96,11 @@ def test_bridge_message_valid_experience_history_alias_command() -> None:
         "POST",
         "/bridge/message",
         headers={BRIDGE_TOKEN_HEADER: "bridge-secret"},
-        json={"message": "!\uacbd\ud5d8\uce58 \ucc3d\ud0ac"},
+        json={"message": "!경험치 창킬"},
     )
 
     assert response.status_code == 200
-    assert history_crawler.received_names == ["\ucc3d\ud0ac"]
+    assert history_crawler.received_names == ["창킬"]
     assert response.json() == {"reply": EXPECTED_HISTORY_REPLY}
 
 
@@ -102,14 +112,12 @@ def test_bridge_message_valid_hexa_command() -> None:
         "POST",
         "/bridge/message",
         headers={BRIDGE_TOKEN_HEADER: "bridge-secret"},
-        json={"message": "!\ud5e5\uc0ac \ucc3d\ud0ac"},
+        json={"message": "!헥사 창킬"},
     )
 
     assert response.status_code == 200
-    assert provider.hexa_received_names == ["\ucc3d\ud0ac"]
-    assert response.json() == {
-        "reply": "[\ucc3d\ud0ac HEXA]\n\nHEXA \ucf54\uc5b4\n[\uc2a4\ud0ac \ucf54\uc5b4]\n- \ub370\ub4dc \uc2a4\ud398\uc774\uc2a4 Lv.18\n\nHEXA \uc2a4\ud0ef\n- I: \uacf5\uaca9\ub825 \uc99d\uac00 Lv.8"
-    }
+    assert provider.hexa_received_names == ["창킬"]
+    assert response.json() == {"reply": EXPECTED_HEXA_REPLY}
 
 
 def test_bridge_message_valid_hexa_cost_command() -> None:
@@ -120,7 +128,7 @@ def test_bridge_message_valid_hexa_cost_command() -> None:
         "POST",
         "/bridge/message",
         headers={BRIDGE_TOKEN_HEADER: "bridge-secret"},
-        json={"message": "!\ud5e5\uc0ac\ube44\uc6a9 1->30"},
+        json={"message": "!헥사비용 1->30"},
     )
 
     assert response.status_code == 200
@@ -135,13 +143,13 @@ def test_bridge_message_valid_union_command() -> None:
         "POST",
         "/bridge/message",
         headers={BRIDGE_TOKEN_HEADER: "bridge-secret"},
-        json={"message": "!\uc720\ub2c8\uc628 \ucc3d\ud0ac"},
+        json={"message": "!유니온 창킬"},
     )
 
     assert response.status_code == 200
-    assert provider.union_received_names == ["\ucc3d\ud0ac"]
+    assert provider.union_received_names == ["창킬"]
     assert response.json() == {
-        "reply": "[\ucc3d\ud0ac \uc720\ub2c8\uc628]\n\n\uc720\ub2c8\uc628 \ub808\ubca8: 9,867\n\uc720\ub2c8\uc628 \ub4f1\uae09: \uadf8\ub79c\ub4dc \ub9c8\uc2a4\ud130 \uc720\ub2c8\uc628 4\n\uc544\ud2f0\ud329\ud2b8 \ub808\ubca8: 59\n\uc544\ud2f0\ud329\ud2b8 \ud3ec\uc778\ud2b8: 19,700\n\uc794\uc5ec \uc544\ud2f0\ud329\ud2b8 AP: 6\n\uc544\ud2f0\ud329\ud2b8 \ud6a8\uacfc: \uc62c\uc2a4\ud0ef 150 \uc99d\uac00\n\n\uc720\ub2c8\uc628 \ucc54\ud53c\uc5b8\nSSS: 1\uba85\n\ub204\uc801 \ud6a8\uacfc: \ud06c\ub9ac\ud2f0\uceec \ub370\ubbf8\uc9c0 12.00% \uc99d\uac00"
+        "reply": "[창킬 유니온]\n\n유니온 레벨: 9,867\n유니온 등급: 그랜드 마스터 유니온 4\n아티팩트 레벨: 59\n아티팩트 포인트: 19,700\n잔여 아티팩트 AP: 6\n아티팩트 효과: 올스탯 150 증가\n\n유니온 챔피언\nSSS: 1명\n누적 효과: 크리티컬 데미지 12.00% 증가"
     }
 
 
@@ -153,11 +161,11 @@ def test_bridge_message_returns_user_friendly_error_for_unsupported_command() ->
         "POST",
         "/bridge/message",
         headers={BRIDGE_TOKEN_HEADER: "bridge-secret"},
-        json={"message": "!\uc5c6\ub294\uba85\ub839\uc5b4 \ucc3d\ud0ac"},
+        json={"message": "!없는명령어 창킬"},
     )
 
     assert response.status_code == 200
-    assert response.json() == {"reply": "\uc9c0\uc6d0\ud558\uc9c0 \uc54a\ub294 \uba85\ub839\uc5b4\uc785\ub2c8\ub2e4."}
+    assert response.json() == {"reply": "지원하지 않는 명령어입니다."}
 
 
 def test_bridge_message_rejects_missing_message() -> None:
@@ -168,11 +176,11 @@ def test_bridge_message_rejects_missing_message() -> None:
         "POST",
         "/bridge/message",
         headers={BRIDGE_TOKEN_HEADER: "bridge-secret"},
-        json={"room": "\ud14c\uc2a4\ud2b8\ubc29", "sender": "\ud14c\uc2a4\ud130"},
+        json={"room": "테스트방", "sender": "테스터"},
     )
 
     assert response.status_code == 400
-    assert response.json() == {"reply": "\uc798\ubabb\ub41c \uc694\uccad\uc785\ub2c8\ub2e4."}
+    assert response.json() == {"reply": "잘못된 요청입니다."}
 
 
 def test_bridge_message_accepts_valid_bridge_token() -> None:
@@ -183,7 +191,7 @@ def test_bridge_message_accepts_valid_bridge_token() -> None:
         "POST",
         "/bridge/message",
         headers={BRIDGE_TOKEN_HEADER: "bridge-secret"},
-        json={"message": "!\ud658\uc0b0 \ucc3d\ud0ac"},
+        json={"message": "!환산 창킬"},
     )
 
     assert response.status_code == 200
@@ -196,7 +204,7 @@ def test_bridge_message_rejects_missing_bridge_token() -> None:
         app,
         "POST",
         "/bridge/message",
-        json={"message": "!\ud658\uc0b0 \ucc3d\ud0ac"},
+        json={"message": "!환산 창킬"},
     )
 
     assert response.status_code == 401
@@ -211,7 +219,7 @@ def test_bridge_message_rejects_invalid_bridge_token() -> None:
         "POST",
         "/bridge/message",
         headers={BRIDGE_TOKEN_HEADER: "wrong-token"},
-        json={"message": "!\ud658\uc0b0 \ucc3d\ud0ac"},
+        json={"message": "!환산 창킬"},
     )
 
     assert response.status_code == 401
@@ -233,11 +241,11 @@ def test_bridge_message_uses_command_timeout_instead_of_kakao_timeout() -> None:
         "POST",
         "/bridge/message",
         headers={BRIDGE_TOKEN_HEADER: "bridge-secret"},
-        json={"message": "!\uacbd\ud5d8\uce58 \ud788\uc2a4\ud1a0\ub9ac \ucc3d\ud0ac"},
+        json={"message": "!경험치 히스토리 창킬"},
     )
 
     assert response.status_code == 200
-    assert history_crawler.received_names == ["\ucc3d\ud0ac"]
+    assert history_crawler.received_names == ["창킬"]
     assert response.json() == {"reply": EXPECTED_HISTORY_REPLY}
 
 
@@ -255,11 +263,12 @@ def test_bridge_message_maps_command_timeout_to_user_friendly_error() -> None:
         "POST",
         "/bridge/message",
         headers={BRIDGE_TOKEN_HEADER: "bridge-secret"},
-        json={"message": "!\uacbd\ud5d8\uce58 \ud788\uc2a4\ud1a0\ub9ac \ucc3d\ud0ac"},
+        json={"message": "!경험치 히스토리 창킬"},
     )
 
     assert response.status_code == 200
-    assert history_crawler.received_names == ["\ucc3d\ud0ac"]
+    assert history_crawler.received_names == ["창킬"]
     assert response.json() == {
-        "reply": "\ud604\uc7ac \uc870\ud68c \uc0ac\uc774\ud2b8\uc5d0 \uc811\uc18d\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.\n\uc7a0\uc2dc \ud6c4 \ub2e4\uc2dc \uc2dc\ub3c4\ud574\uc8fc\uc138\uc694."
+        "reply": "현재 조회 사이트에 접속할 수 없습니다.\n잠시 후 다시 시도해주세요."
     }
+

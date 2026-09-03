@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 from datetime import date, datetime, timezone
@@ -54,7 +54,7 @@ class FakeHistoryCrawler:
 
         return ExperienceHistory(
             character_name=character_name,
-            world_name="\uc2a4\uce74\ub2c8\uc544",
+            world_name="스카니아",
             entries=[
                 ExperienceHistoryEntry(
                     date=date(2025, 1, 11),
@@ -79,18 +79,36 @@ class FakeHistoryCrawler:
             character_name=character_name,
             cores=[
                 HexaCore(
-                    name="\ub370\ub4dc \uc2a4\ud398\uc774\uc2a4",
+                    name="데드 스페이스",
                     level=18,
-                    core_type="\uc2a4\ud0ac \ucf54\uc5b4",
-                    linked_skills=["\ub370\ub4dc \uc2a4\ud398\uc774\uc2a4"],
-                )
+                    core_type="스킬 코어",
+                    linked_skills=["데드 스페이스"],
+                ),
+                HexaCore(
+                    name="다크 임페일 VI/다크 신서시스 VI",
+                    level=30,
+                    core_type="마스터리 코어",
+                    linked_skills=["다크 임페일 VI", "다크 신서시스 VI"],
+                ),
+                HexaCore(
+                    name="다크 스피어",
+                    level=30,
+                    core_type="강화 코어",
+                    linked_skills=["다크 스피어 강화"],
+                ),
+                HexaCore(
+                    name="솔 야누스",
+                    level=30,
+                    core_type="공용 코어",
+                    linked_skills=["솔 야누스", "솔 야누스 : 새벽", "솔 야누스 : 황혼"],
+                ),
             ],
             stat_sets=[
                 HexaStatSet(
-                    label="HEXA \uc2a4\ud0ef I",
+                    label="HEXA 스탯 I",
                     cores=[
                         HexaStatCore(
-                            main_stat_name="\uacf5\uaca9\ub825 \uc99d\uac00",
+                            main_stat_name="공격력 증가",
                             main_stat_level=8,
                         )
                     ],
@@ -103,17 +121,17 @@ class FakeHistoryCrawler:
         return UnionOverview(
             character_name=character_name,
             union_level=9867,
-            union_grade="\uadf8\ub79c\ub4dc \ub9c8\uc2a4\ud130 \uc720\ub2c8\uc628 4",
+            union_grade="그랜드 마스터 유니온 4",
             union_artifact_level=59,
             union_artifact_point=19700,
             union_artifact_remain_ap=6,
             artifact_effects=[
-                UnionArtifactEffect(name="\uc62c\uc2a4\ud0ef 150 \uc99d\uac00", level=10),
+                UnionArtifactEffect(name="올스탯 150 증가", level=10),
             ],
             champions=[
-                UnionChampion(name="\ub300\ud45c\uce90\ub9ad\ud130", grade="SSS"),
+                UnionChampion(name="대표캐릭터", grade="SSS"),
             ],
-            champion_badge_totals=["\ud06c\ub9ac\ud2f0\uceec \ub370\ubbf8\uc9c0 12.00% \uc99d\uac00"],
+            champion_badge_totals=["크리티컬 데미지 12.00% 증가"],
         )
 
     async def fetch_overall_ranking(self, character_name: str) -> CharacterRanking:
@@ -122,8 +140,8 @@ class FakeHistoryCrawler:
             character_name=character_name,
             ranking=12345,
             ranking_date=date(2025, 1, 12),
-            world_name="\uc2a4\uce74\ub2c8\uc544",
-            class_name="\ub2e4\ud06c\ub098\uc774\ud2b8",
+            world_name="스카니아",
+            class_name="다크나이트",
             character_level=289,
         )
 
@@ -132,7 +150,7 @@ class FakeHistoryCrawler:
         return NoticeFeed(
             items=[
                 NoticeItem(
-                    title="\ud14c\uc2a4\ud2b8 \uacf5\uc9c0",
+                    title="테스트 공지",
                     url="https://example.com/notices/1",
                     published_at=datetime(2025, 1, 12, tzinfo=timezone.utc),
                 )
@@ -213,5 +231,5 @@ def request_json(
 
 def build_provider_timeout_error() -> ExternalSiteUnavailableError:
     return ExternalSiteUnavailableError(
-        "\ud604\uc7ac \uc870\ud68c \uc0ac\uc774\ud2b8\uc5d0 \uc811\uc18d\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.\n\uc7a0\uc2dc \ud6c4 \ub2e4\uc2dc \uc2dc\ub3c4\ud574\uc8fc\uc138\uc694."
+        "현재 조회 사이트에 접속할 수 없습니다.\n잠시 후 다시 시도해주세요."
     )

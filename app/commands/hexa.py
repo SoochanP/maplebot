@@ -1,12 +1,13 @@
 ﻿from __future__ import annotations
 
-from collections import defaultdict
 from collections.abc import Iterable
 from typing import Protocol
 
 from app.commands.base import CommandHandler
+from app.data.hexa_costs import calculate_hexa_cumulative_cost
 from app.models.command import ParsedCommand
-from app.models.hexa import HexaCore, HexaOverview, HexaStatCore, HexaStatSet
+from app.models.hexa import HexaCore, HexaOverview
+from app.models.hexa_cost import HexaCumulativeCostSummary, HexaResourceProgress
 
 
 class HexaReader(Protocol):
@@ -23,6 +24,13 @@ class HexaCommand(CommandHandler):
         "강화 코어": 2,
         "공용 코어": 3,
     }
+    _CORE_TYPE_LABELS = {
+        "스킬 코어": "스킬",
+        "마스터리 코어": "마스",
+        "강화 코어": "강화",
+        "공용 코어": "공용",
+    }
+    _COST_UNAVAILABLE_MESSAGE = "계산 불가 (미등록 코어 존재)"
 
     def __init__(self, reader: HexaReader) -> None:
         self._reader = reader
@@ -33,70 +41,58 @@ class HexaCommand(CommandHandler):
         return self._format_response(overview)
 
     def _format_response(self, overview: HexaOverview) -> str:
-        sections = [f"[{overview.character_name} HEXA]"]
+        sections = [f"[{overview.character_name}] 헥사 스킬 정보"]
 
         if overview.cores:
-            core_sections = ["HEXA 코어"]
-            for core_type, cores in self._group_cores(overview.cores):
-                core_sections.append(f"[{core_type}]")
-                for core in cores:
-                    core_sections.extend(self._format_core_lines(core))
-                core_sections.append("")
-            if core_sections[-1] == "":
-                core_sections.pop()
-            sections.append("\n".join(core_sections))
-
-        if overview.stat_sets:
-            stat_lines = ["HEXA 스탯"]
-            for stat_set in overview.stat_sets:
-                stat_lines.extend(self._format_stat_set_lines(stat_set))
-            sections.append("\n".join(stat_lines))
+            sections.append(
+                "\n".join(
+                    self._format_core_line(core)
+                    for core in self._sort_cores(overview.cores)
+                )
+            )
+            cumulative_lines = self._format_cumulative_lines(
+                calculate_hexa_cumulative_cost(overview.cores)
+            )
+            if cumulative_lines:
+                sections.append("\n".join(cumulative_lines))
 
         return "\n\n".join(sections)
 
-    def _group_cores(self, cores: Iterable[HexaCore]) -> list[tuple[str, list[HexaCore]]]:
-        grouped: dict[str, list[HexaCore]] = defaultdict(list)
-        for core in cores:
-            grouped[core.core_type or "기타 코어"].append(core)
-
+    def _sort_cores(self, cores: Iterable[HexaCore]) -> list[HexaCore]:
         return sorted(
-            grouped.items(),
-            key=lambda item: (self._CORE_TYPE_ORDER.get(item[0], 99), item[0]),
+            cores,
+            key=lambda core: self._CORE_TYPE_ORDER.get(core.core_type or "", 99),
         )
 
-    def _format_core_lines(self, core: HexaCore) -> list[str]:
-        lines = [f"- {core.name} Lv.{core.level}"]
-        if self._should_show_linked_skills(core):
-            lines.append(f"  연결 스킬: {', '.join(core.linked_skills)}")
-        return lines
+    def _format_core_line(self, core: HexaCore) -> str:
+        return f"• [{self._resolve_core_type_label(core.core_type)}] Lv.{core.level} {core.name}"
+
+    def _resolve_core_type_label(self, core_type: str | None) -> str:
+        if core_type is None or not core_type.strip():
+            return "기타"
+        return self._CORE_TYPE_LABELS.get(core_type, core_type)
+
+    def _format_cumulative_lines(
+        self,
+        summary: HexaCumulativeCostSummary,
+    ) -> list[str]:
+        if summary.unresolved_core_names:
+            return [
+                f"• 누적 솔 에르다 : {self._COST_UNAVAILABLE_MESSAGE}",
+                f"• 누적 조각 : {self._COST_UNAVAILABLE_MESSAGE}",
+            ]
+
+        if summary.sol_erda is None or summary.fragments is None:
+            return []
+
+        return [
+            self._format_progress_line("누적 솔 에르다", summary.sol_erda),
+            self._format_progress_line("누적 조각", summary.fragments),
+        ]
 
     @staticmethod
-    def _should_show_linked_skills(core: HexaCore) -> bool:
-        if not core.linked_skills:
-            return False
-        if len(core.linked_skills) > 1:
-            return True
-        return core.linked_skills[0] != core.name
-
-    def _format_stat_set_lines(self, stat_set: HexaStatSet) -> list[str]:
-        lines: list[str] = []
-        label = stat_set.label.replace("HEXA 스탯 ", "")
-        for core in stat_set.cores:
-            lines.append(f"- {label}: {self._format_stat_core(core)}")
-        return lines
-
-    @staticmethod
-    def _format_stat_core(core: HexaStatCore) -> str:
-        parts: list[str] = []
-        for stat_name, stat_level in (
-            (core.main_stat_name, core.main_stat_level),
-            (core.sub_stat_name_1, core.sub_stat_level_1),
-            (core.sub_stat_name_2, core.sub_stat_level_2),
-        ):
-            if stat_name is None:
-                continue
-            if stat_level is None:
-                parts.append(stat_name)
-            else:
-                parts.append(f"{stat_name} Lv.{stat_level}")
-        return " / ".join(parts) if parts else "설정 정보 없음"
+    def _format_progress_line(label: str, progress: HexaResourceProgress) -> str:
+        return (
+            f"• {label} : {progress.current:,} / {progress.maximum:,} "
+            f"({progress.percent}%)"
+        )
