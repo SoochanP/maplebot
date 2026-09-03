@@ -89,7 +89,7 @@ def test_hexa_command_formats_compact_core_list_and_cumulative_cost() -> None:
         "• [강화] Lv.30 다크 스피어\n"
         "• [공용] Lv.30 솔 야누스\n\n"
         "• 누적 솔 에르다 : 474 / 564 (84%)\n"
-        "• 누적 조각 : 13,503 / 16,403 (82%)"
+        "• 누적 조각 : 13,403 / 16,403 (81%)"
     )
     assert "연결 스킬" not in result
     assert "HEXA 스탯" not in result
@@ -130,7 +130,7 @@ def test_hexa_command_uses_existing_skill_cost_for_unregistered_skill_core() -> 
     assert result == (
         "[창킬] 헥사 스킬 정보\n\n"
         "• [스킬] Lv.12 미등록 헥사 코어\n\n"
-        "• 누적 솔 에르다 : 36 / 150 (24%)\n"
+        "• 누적 솔 에르다 : 41 / 150 (27%)\n"
         "• 누적 조각 : 850 / 4,500 (18%)"
     )
     assert "HEXA 스탯" not in result

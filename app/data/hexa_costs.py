@@ -15,9 +15,10 @@ from app.data.hexa_cost_tables import (
 )
 from app.data.hexa_special_profiles import (
     CLASS_COMMON_CORE_NAMES,
+    FREE_ORIGIN_CORE_NAMES,
     THIRD_SKILL_CORE_NAMES,
 )
-from app.models.hexa import HexaCore
+from app.models.hexa import HexaCore, HexaStatSet
 from app.models.hexa_cost import (
     HexaCostProfileSummary,
     HexaCostSummary,
@@ -27,6 +28,14 @@ from app.models.hexa_cost import (
 
 
 logger = logging.getLogger("maplebot.hexa_costs")
+
+_FREE_ORIGIN_ACTIVATION_SOL_ERDA = 5
+_FREE_ORIGIN_ACTIVATION_FRAGMENTS = 100
+_HEXA_STAT_ACTIVATION_SOL_ERDA_BY_LABEL = {
+    "HEXA 스탯 I": 5,
+    "HEXA 스탯 II": 10,
+    "HEXA 스탯 III": 15,
+}
 
 
 def calculate_hexa_cost_summary(current_level: int, target_level: int) -> HexaCostSummary:
@@ -56,7 +65,10 @@ def calculate_hexa_profile_cost(
     )
 
 
-def calculate_hexa_cumulative_cost(cores: Sequence[HexaCore]) -> HexaCumulativeCostSummary:
+def calculate_hexa_cumulative_cost(
+    cores: Sequence[HexaCore],
+    stat_sets: Sequence[HexaStatSet] = (),
+) -> HexaCumulativeCostSummary:
     if not cores:
         return HexaCumulativeCostSummary()
 
@@ -87,6 +99,13 @@ def calculate_hexa_cumulative_cost(cores: Sequence[HexaCore]) -> HexaCumulativeC
     if unresolved_core_names:
         logger.warning("hexa_cost unresolved_cores=%s", ", ".join(unresolved_core_names))
         return HexaCumulativeCostSummary(unresolved_core_names=unresolved_core_names)
+
+    current_sol_erda, current_fragments = _subtract_free_origin_activation_cost(
+        cores,
+        current_sol_erda,
+        current_fragments,
+    )
+    current_sol_erda += _calculate_hexa_stat_activation_sol_erda(stat_sets)
 
     return HexaCumulativeCostSummary(
         sol_erda=HexaResourceProgress(
@@ -123,6 +142,52 @@ def resolve_hexa_cost_profile(core_name: str, core_type: str | None) -> str | No
         return PROFILE_COMMON
 
     return None
+
+
+def _subtract_free_origin_activation_cost(
+    cores: Sequence[HexaCore],
+    current_sol_erda: int,
+    current_fragments: int,
+) -> tuple[int, int]:
+    free_origin_core = _find_free_origin_core(cores)
+    if free_origin_core is None:
+        return current_sol_erda, current_fragments
+
+    return (
+        max(current_sol_erda - _FREE_ORIGIN_ACTIVATION_SOL_ERDA, 0),
+        max(current_fragments - _FREE_ORIGIN_ACTIVATION_FRAGMENTS, 0),
+    )
+
+
+def _find_free_origin_core(cores: Sequence[HexaCore]) -> HexaCore | None:
+    candidates = [
+        core
+        for core in cores
+        if core.level > 0
+        and core.name.strip() in FREE_ORIGIN_CORE_NAMES
+        and (core.core_type or "").strip() == "스킬 코어"
+    ]
+    if len(candidates) > 1:
+        logger.warning(
+            "hexa_cost multiple_free_origin_candidates=%s",
+            ", ".join(core.name for core in candidates),
+        )
+    return candidates[0] if candidates else None
+
+
+def _calculate_hexa_stat_activation_sol_erda(stat_sets: Sequence[HexaStatSet]) -> int:
+    total_sol_erda = 0
+    seen_labels: set[str] = set()
+
+    for stat_set in stat_sets:
+        normalized_label = stat_set.label.strip()
+        if not normalized_label or not stat_set.cores or normalized_label in seen_labels:
+            continue
+
+        seen_labels.add(normalized_label)
+        total_sol_erda += _HEXA_STAT_ACTIVATION_SOL_ERDA_BY_LABEL.get(normalized_label, 0)
+
+    return total_sol_erda
 
 
 def _append_unresolved_core(unresolved_core_names: list[str], core_name: str) -> None:

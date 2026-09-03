@@ -5,7 +5,7 @@ from app.data.hexa_costs import (
     calculate_hexa_cumulative_cost,
     resolve_hexa_cost_profile,
 )
-from app.models.hexa import HexaCore
+from app.models.hexa import HexaCore, HexaStatCore, HexaStatSet
 
 
 def profile_totals(current_level: int, target_level: int) -> dict[str, tuple[int, int]]:
@@ -18,6 +18,13 @@ def profile_totals(current_level: int, target_level: int) -> dict[str, tuple[int
 
 def build_core(name: str, level: int, core_type: str) -> HexaCore:
     return HexaCore(name=name, level=level, core_type=core_type)
+
+
+def build_stat_set(label: str) -> HexaStatSet:
+    return HexaStatSet(
+        label=label,
+        cores=[HexaStatCore(main_stat_name="공격력 증가", main_stat_level=1)],
+    )
 
 
 def test_calculate_hexa_cost_summary_matches_golden_values_for_1_to_30() -> None:
@@ -83,10 +90,10 @@ def test_resolve_hexa_cost_profile_distinguishes_verified_mixed_profiles() -> No
     assert resolve_hexa_cost_profile("얼티밋 다크 사이트 VI", "공용 코어") == "직업군 공용"
 
 
-def test_calculate_hexa_cumulative_cost_includes_activation_cost_for_current_level() -> None:
-    level_one = calculate_hexa_cumulative_cost([build_core("데드 스페이스", 1, "스킬 코어")])
-    level_twenty_nine = calculate_hexa_cumulative_cost([build_core("데드 스페이스", 29, "스킬 코어")])
-    level_thirty = calculate_hexa_cumulative_cost([build_core("데드 스페이스", 30, "스킬 코어")])
+def test_calculate_hexa_cumulative_cost_includes_activation_cost_for_non_origin_skill_core() -> None:
+    level_one = calculate_hexa_cumulative_cost([build_core("미등록 헥사 코어", 1, "스킬 코어")])
+    level_twenty_nine = calculate_hexa_cumulative_cost([build_core("미등록 헥사 코어", 29, "스킬 코어")])
+    level_thirty = calculate_hexa_cumulative_cost([build_core("미등록 헥사 코어", 30, "스킬 코어")])
 
     assert level_one.sol_erda is not None
     assert level_one.fragments is not None
@@ -108,6 +115,19 @@ def test_calculate_hexa_cumulative_cost_includes_activation_cost_for_current_lev
     assert level_thirty.fragments.percent == 100
 
 
+def test_calculate_hexa_cumulative_cost_excludes_free_origin_activation_from_current_only() -> None:
+    summary = calculate_hexa_cumulative_cost([build_core("데드 스페이스", 30, "스킬 코어")])
+
+    assert summary.sol_erda is not None
+    assert summary.fragments is not None
+    assert summary.sol_erda.current == 145
+    assert summary.sol_erda.maximum == 150
+    assert summary.sol_erda.percent == 96
+    assert summary.fragments.current == 4400
+    assert summary.fragments.maximum == 4500
+    assert summary.fragments.percent == 97
+
+
 def test_calculate_hexa_cumulative_cost_sums_multiple_verified_cores() -> None:
     summary = calculate_hexa_cumulative_cost(
         [
@@ -120,12 +140,33 @@ def test_calculate_hexa_cumulative_cost_sums_multiple_verified_cores() -> None:
 
     assert summary.sol_erda is not None
     assert summary.fragments is not None
-    assert summary.sol_erda.current == 474
+    assert summary.sol_erda.current == 469
     assert summary.sol_erda.maximum == 564
-    assert summary.sol_erda.percent == 84
-    assert summary.fragments.current == 13503
+    assert summary.sol_erda.percent == 83
+    assert summary.fragments.current == 13403
     assert summary.fragments.maximum == 16403
-    assert summary.fragments.percent == 82
+    assert summary.fragments.percent == 81
+    assert summary.unresolved_core_names == []
+
+
+def test_calculate_hexa_cumulative_cost_adds_hexa_stat_activation_sol_erda_only() -> None:
+    summary = calculate_hexa_cumulative_cost(
+        [build_core("미등록 헥사 코어", 12, "스킬 코어")],
+        [
+            build_stat_set("HEXA 스탯 I"),
+            build_stat_set("HEXA 스탯 II"),
+            build_stat_set("HEXA 스탯 III"),
+        ],
+    )
+
+    assert summary.sol_erda is not None
+    assert summary.fragments is not None
+    assert summary.sol_erda.current == 66
+    assert summary.sol_erda.maximum == 150
+    assert summary.sol_erda.percent == 44
+    assert summary.fragments.current == 850
+    assert summary.fragments.maximum == 4500
+    assert summary.fragments.percent == 18
     assert summary.unresolved_core_names == []
 
 

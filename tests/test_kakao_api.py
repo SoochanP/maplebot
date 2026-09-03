@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from app.api.kakao import KAKAO_SKILL_TOKEN_HEADER
 from tests.api_test_support import (
@@ -26,7 +26,7 @@ EXPECTED_HEXA_REPLY = (
     "• [강화] Lv.30 다크 스피어\n"
     "• [공용] Lv.30 솔 야누스\n\n"
     "• 누적 솔 에르다 : 474 / 564 (84%)\n"
-    "• 누적 조각 : 13,503 / 16,403 (82%)"
+    "• 누적 조각 : 13,403 / 16,403 (81%)"
 )
 
 

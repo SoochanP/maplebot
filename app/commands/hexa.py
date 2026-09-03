@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from collections.abc import Iterable
 from typing import Protocol
@@ -51,7 +51,7 @@ class HexaCommand(CommandHandler):
                 )
             )
             cumulative_lines = self._format_cumulative_lines(
-                calculate_hexa_cumulative_cost(overview.cores)
+                calculate_hexa_cumulative_cost(overview.cores, overview.stat_sets)
             )
             if cumulative_lines:
                 sections.append("\n".join(cumulative_lines))

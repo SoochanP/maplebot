@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from app.api.bridge import BRIDGE_TOKEN_HEADER
 from tests.api_test_support import FakeHistoryCrawler, build_test_app, request_json
@@ -21,7 +21,7 @@ EXPECTED_HEXA_REPLY = (
     "• [강화] Lv.30 다크 스피어\n"
     "• [공용] Lv.30 솔 야누스\n\n"
     "• 누적 솔 에르다 : 474 / 564 (84%)\n"
-    "• 누적 조각 : 13,503 / 16,403 (82%)"
+    "• 누적 조각 : 13,403 / 16,403 (81%)"
 )
 
 EXPECTED_HEXA_COST_REPLY = (
@@ -271,4 +271,3 @@ def test_bridge_message_maps_command_timeout_to_user_friendly_error() -> None:
     assert response.json() == {
         "reply": "현재 조회 사이트에 접속할 수 없습니다.\n잠시 후 다시 시도해주세요."
     }
-
