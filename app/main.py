@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
@@ -7,6 +7,7 @@ import logging
 from fastapi import FastAPI
 
 from app.api.bridge import router as bridge_router
+from app.api.health import router as health_router
 from app.api.kakao import router as kakao_router
 from app.bootstrap import ApplicationServices, build_application_services
 from app.core.settings import ApplicationSettings
@@ -68,10 +69,7 @@ def create_app(
     if services is not None:
         app.state.services = services
 
-    @app.get("/health")
-    async def health() -> dict[str, str]:
-        return {"status": "ok"}
-
+    app.include_router(health_router)
     app.include_router(kakao_router)
     app.include_router(bridge_router)
     return app

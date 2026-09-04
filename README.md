@@ -1,4 +1,4 @@
-﻿# MapleBot
+# MapleBot
 
 MapleBot is a maintainable command-based MapleStory chatbot backend. It provides a shared command pipeline for a local CLI, the official Kakao chatbot webhook, and an Android bridge endpoint.
 
@@ -22,9 +22,10 @@ Environment variables:
 - `MAPLEBOT_NEXON_API_KEY`: required for NEXON-backed commands, sent as `x-nxopen-api-key`
 - `MAPLEBOT_KAKAO_SKILL_TOKEN`: optional official Kakao webhook secret checked against `X-MapleBot-Token`
 - `MAPLEBOT_BRIDGE_TOKEN`: optional bridge secret checked against `X-MapleBot-Bridge-Token`
-- `MAPLEBOT_KAKAO_REQUEST_TIMEOUT_SECONDS`: shared command execution limit for Kakao and bridge requests, default `4.5`
-- `MAPLEBOT_HTTP_REQUEST_TIMEOUT_SECONDS`: shared outbound request timeout, default `3.0`
-- `MAPLEBOT_HTTP_CONNECT_TIMEOUT_SECONDS`: shared outbound connect timeout, default `1.0`
+- `MAPLEBOT_KAKAO_REQUEST_TIMEOUT_SECONDS`: Kakao skill response budget, default `4.5`
+- `MAPLEBOT_COMMAND_EXECUTION_TIMEOUT_SECONDS`: shared bridge and Kakao command execution limit, default `15.0`
+- `MAPLEBOT_HTTP_REQUEST_TIMEOUT_SECONDS`: shared outbound request timeout, default `8.0`
+- `MAPLEBOT_HTTP_CONNECT_TIMEOUT_SECONDS`: shared outbound connect timeout, default `2.0`
 
 Behavior:
 
@@ -33,6 +34,7 @@ Behavior:
 - If `MAPLEBOT_BRIDGE_TOKEN` is configured, `POST /bridge/message` requires a matching `X-MapleBot-Bridge-Token` header.
 - If either webhook token is not configured, that endpoint remains open for local development and tests.
 - `GET /health` is always public.
+- `GET /health/ready` is always public and returns a lightweight readiness response for external wake-up probes.
 
 ## Run Tests
 
@@ -75,6 +77,7 @@ uvicorn app.main:app --reload
 Available endpoints:
 
 - `GET /health`
+- `GET /health/ready`
 - `POST /kakao/webhook`
 - `POST /bridge/message`
 
@@ -134,6 +137,64 @@ Example bridge response:
   "reply": "[창킬 환산주스탯]\n\nhttps://maplescouter.com/ko/info?name=%EC%B0%BD%ED%82%AC"
 }
 ```
+
+## MessageBotR Wake-Up Integration
+
+- This repository does not contain the real MessageBotR operating source.
+- `GET /health/ready` returns `204 No Content` with an empty body and may be used as a lightweight wake trigger before a single retry.
+- Recommended client policy:
+  - first try `POST /bridge/message`
+  - retry only for network-level failures such as `SocketException`, `SocketTimeoutException`, connection abort/reset, or no HTTP response received
+  - on a retryable network failure, call `GET /health/ready`, wait `2500ms`, then retry the original `POST /bridge/message` exactly once
+  - do not retry when an actual HTTP response was received, including `400`, `404`, `422`, `500`, `502`, or `503`
+
+Minimal MessageBotR example to apply in the existing shared HTTP request function:
+
+```javascript
+function requestMapleBot(url, body) {
+    try {
+        return executeRequest(url, body);
+    } catch (error) {
+        if (!isRetryableNetworkError(error)) {
+            throw error;
+        }
+
+        wakeMapleBotServer();
+        java.lang.Thread.sleep(2500);
+        return executeRequest(url, body);
+    }
+}
+
+function wakeMapleBotServer() {
+    try {
+        org.jsoup.Jsoup.connect(SERVER_BASE_URL + "/health/ready")
+            .ignoreContentType(true)
+            .ignoreHttpErrors(true)
+            .timeout(3000)
+            .method(org.jsoup.Connection.Method.GET)
+            .execute();
+    } catch (error) {
+        // Cold start may still begin even if the wake request times out.
+    }
+}
+
+function isRetryableNetworkError(error) {
+    var message = String(error);
+
+    return message.indexOf("SocketException") >= 0 ||
+        message.indexOf("SocketTimeoutException") >= 0 ||
+        message.indexOf("connection abort") >= 0 ||
+        message.indexOf("Connection reset") >= 0 ||
+        message.indexOf("timed out") >= 0;
+}
+```
+
+Manual verification checklist:
+
+- healthy server: first `POST /bridge/message` succeeds, no wake request, no retry
+- `Software caused connection abort`: wake with `GET /health/ready`, wait `2500ms`, retry the original `POST /bridge/message` once
+- retry failure: stop after the second request and surface the existing error handling
+- HTTP `500`: do not wake and do not retry because the server already responded
 
 ## Current Supported Commands
 
